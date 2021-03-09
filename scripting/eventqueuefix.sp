@@ -16,6 +16,7 @@
 #pragma semicolon 1
 
 ArrayList g_aPlayerEvents[MAXPLAYERS+1];
+bool g_bLateLoad;
 
 enum struct event_t
 {
@@ -42,6 +43,27 @@ public void OnPluginStart()
 	LoadDHooks();
 }
 
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	g_bLateLoad = late;
+	
+	return APLRes_Success;
+}
+
+public void OnMapStart()
+{
+	if(g_bLateLoad)
+	{
+		for(int client = 1; client <= MaxClients; client++)
+		{
+			if(IsClientInGame(client))
+			{
+				OnClientPutInServer(client);
+			}
+		}
+	}
+}
+
 public void OnClientPutInServer(int client)
 {
 	if(g_aPlayerEvents[client] == null)
@@ -66,7 +88,7 @@ public void OnClientDisconnect(int client)
 
 void LoadDHooks()
 {
-	Handle gamedataConf = LoadGameConfigFile("eventfix.games");
+	GameData gamedataConf = LoadGameConfigFile("eventfix.games");
 	
 	if(gamedataConf == null)
 	{
@@ -118,6 +140,7 @@ void LoadDHooks()
 	DHookAddParam(addEventThree, HookParamType_Int);
 	if(!DHookEnableDetour(addEventThree, false, DHook_AddEventThree))
 		SetFailState("Couldn't enable AddEventThree detour.");
+	
 	
 	delete gamedataConf;
 }
@@ -189,8 +212,9 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 		PrintToChatAll("AddEventThree: %s, %s, %s, %f, %i, %i, %i", event.target, event.targetInput, event.variantValue, event.delay, event.activator, event.caller, event.outputID);
 	#endif
 	
-	if(!strcmp("!activator", event.target) && (event.activator < 65 && event.activator > 0))
+	if(!strcmp("!activator", event.target) && (event.activator < 65 && event.activator > 0) && !StrContains(event.variantValue, "basevelocity"))
 	{
+
 		g_aPlayerEvents[event.activator].PushArray(event);
 		return MRES_Supercede;
 	}
@@ -211,7 +235,7 @@ public void PostThink(int client)
 			AcceptEntityInput(client, event.targetInput, client, event.caller, event.outputID);	
 			
 			#if defined DEBUG
-				PrintToChat(client, "Performing output: %s", event.variantValue);
+				PrintToChat(client, "Performing output: %s, %i", event.variantValue, event.outputID);
 			#endif
 			
 			g_aPlayerEvents[client].Erase(i);
