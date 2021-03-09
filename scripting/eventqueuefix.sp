@@ -16,6 +16,7 @@
 #pragma semicolon 1
 
 ArrayList g_aPlayerEvents[MAXPLAYERS+1];
+bool g_bLateLoad;
 
 enum struct event_t
 {
@@ -42,6 +43,27 @@ public void OnPluginStart()
 	LoadDHooks();
 }
 
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	g_bLateLoad = late;
+	
+	return APLRes_Success;
+}
+
+public void OnMapStart()
+{
+	if(g_bLateLoad)
+	{
+		for(int client = 1; client <= MaxClients; client++)
+		{
+			if(IsClientInGame(client))
+			{
+				OnClientPutInServer(client);
+			}
+		}
+	}
+}
+
 public void OnClientPutInServer(int client)
 {
 	if(g_aPlayerEvents[client] == null)
@@ -51,8 +73,6 @@ public void OnClientPutInServer(int client)
 	{
 		g_aPlayerEvents[client].Clear();
 	}
-	
-	SDKHook(client, SDKHook_PostThink, PostThink);	
 }
 
 public void OnClientDisconnect(int client)
@@ -66,7 +86,7 @@ public void OnClientDisconnect(int client)
 
 void LoadDHooks()
 {
-	Handle gamedataConf = LoadGameConfigFile("eventfix.games");
+	GameData gamedataConf = LoadGameConfigFile("eventfix.games");
 	
 	if(gamedataConf == null)
 	{
@@ -118,6 +138,7 @@ void LoadDHooks()
 	DHookAddParam(addEventThree, HookParamType_Int);
 	if(!DHookEnableDetour(addEventThree, false, DHook_AddEventThree))
 		SetFailState("Couldn't enable AddEventThree detour.");
+	
 	
 	delete gamedataConf;
 }
@@ -198,7 +219,7 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 	return MRES_Ignored;
 }
 
-public void PostThink(int client)
+public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
 {
 	for(int i = 0; i < g_aPlayerEvents[client].Length; i++)
 	{
@@ -211,7 +232,7 @@ public void PostThink(int client)
 			AcceptEntityInput(client, event.targetInput, client, event.caller, event.outputID);	
 			
 			#if defined DEBUG
-				PrintToChat(client, "Performing output: %s", event.variantValue);
+				PrintToChat(client, "Performing output: %s, %i", event.variantValue, event.outputID);
 			#endif
 			
 			g_aPlayerEvents[client].Erase(i);
