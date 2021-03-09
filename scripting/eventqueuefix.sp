@@ -229,7 +229,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		if(event.delay <= 0.0)
 		{
 			SetVariantString(event.variantValue);
-			AcceptEntityInput(client, event.targetInput, client, event.caller, event.outputID);	
+			AcceptEntityInput(client, event.targetInput, client, client, event.outputID); //right now I'm setting the client as the caller, because sourcemod freaks out if the caller isn't a regular CBaseEntity.
 			
 			#if defined DEBUG
 				PrintToChat(client, "Performing output: %s, %i", event.variantValue, event.outputID);
