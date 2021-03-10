@@ -210,7 +210,7 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 		PrintToChatAll("AddEventThree: %s, %s, %s, %f, %i, %i, %i", event.target, event.targetInput, event.variantValue, event.delay, event.activator, event.caller, event.outputID);
 	#endif
 	
-	if(!strcmp("!activator", event.target) && (event.activator < 65 && event.activator > 0))
+	if(!strcmp("!activator", event.target, false) && (event.activator < 65 && event.activator > 0))
 	{
 		g_aPlayerEvents[event.activator].PushArray(event);
 		return MRES_Supercede;
@@ -236,8 +236,8 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			#endif
 			
 			g_aPlayerEvents[client].Erase(i);
-			
-		} else
+		} 
+		else
 		{
 			float timescale = Shavit_GetClientTimescale(client) != -1.0 ? Shavit_GetClientTimescale(client) : Shavit_GetStyleSettingFloat(Shavit_GetBhopStyle(client), "speed");
 			
