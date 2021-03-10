@@ -1,5 +1,5 @@
 
-//#define DEBUG
+#define DEBUG
 
 #define PLUGIN_NAME           "EventQueue fix"
 #define PLUGIN_AUTHOR         "carnifex"
@@ -210,7 +210,7 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 		PrintToChatAll("AddEventThree: %s, %s, %s, %f, %i, %i, %i", event.target, event.targetInput, event.variantValue, event.delay, event.activator, event.caller, event.outputID);
 	#endif
 	
-	if(!strcmp("!activator", event.target, false) && (event.activator < 65 && event.activator > 0))
+	if((event.activator < 65 && event.activator > 0))
 	{
 		g_aPlayerEvents[event.activator].PushArray(event);
 		return MRES_Supercede;
@@ -221,7 +221,7 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
 {
-	for(int i = 0; i < g_aPlayerEvents[client].Length; i++)
+		for(int i = 0; i < g_aPlayerEvents[client].Length; i++)
 	{
 		event_t event;
 		g_aPlayerEvents[client].GetArray(i, event);
@@ -229,10 +229,41 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		if(event.delay <= 0.0)
 		{
 			SetVariantString(event.variantValue);
-			AcceptEntityInput(client, event.targetInput, client, client, event.outputID); //right now I'm setting the client as the caller, because sourcemod freaks out if the caller isn't a regular CBaseEntity.
+			
+			int targetEntity;
+			
+			if(!strcmp("!activator", event.target, false))
+			{
+				targetEntity = event.activator;
+				AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID); //right now I'm setting the client as the caller, because sourcemod freaks out if the caller isn't a regular CBaseEntity.
+			} 
+			else if(!strcmp("!caller", event.target, false))
+			{
+				targetEntity = event.caller;
+				AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID); 
+			} 
+			else
+			{
+				for (int entity = 0; entity < GetMaxEntities()*2; entity++) {
+					
+					if (!IsValidEntity(entity)) {
+						continue;
+					}
+					
+					char buffer[64];
+					GetEntPropString(entity, Prop_Data, "m_iName", buffer, 64);
+					
+					if (!strcmp(event.target, buffer, false)) {
+						targetEntity = entity;
+						AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
+					}
+				}
+			}
+			
+			//AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID); //right now I'm setting the client as the caller, because sourcemod freaks out if the caller isn't a regular CBaseEntity.
 			
 			#if defined DEBUG
-				PrintToChat(client, "Performing output: %s, %i", event.variantValue, event.outputID);
+				PrintToChat(client, "Performing output: %s, %i, %i, %s %s, %i", event.target, targetEntity, event.caller, event.targetInput, event.variantValue, event.outputID);
 			#endif
 			
 			g_aPlayerEvents[client].Erase(i);
