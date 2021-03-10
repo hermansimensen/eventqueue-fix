@@ -69,8 +69,7 @@ public void OnClientPutInServer(int client)
 	if(g_aPlayerEvents[client] == null)
 	{
 		g_aPlayerEvents[client] = new ArrayList(sizeof(event_t));
-	}
-	else
+	} else
 	{
 		g_aPlayerEvents[client].Clear();
 	}
@@ -148,9 +147,7 @@ void LoadDHooks()
 public MRESReturn DHook_AcceptInput(int pThis, Handle hReturn, Handle hParams)
 {
 	if(DHookIsNullParam(hParams, 2))
-	{
 		return MRES_Ignored;
-	}
 
 	int client = DHookGetParam(hParams, 2);
 	char input[64];
@@ -160,6 +157,8 @@ public MRESReturn DHook_AcceptInput(int pThis, Handle hReturn, Handle hParams)
 	char args[2][64];
 	ExplodeString(variantString, " ", args, 2, 64);
 
+
+	
 	return MRES_Ignored;
  } 
 
@@ -196,9 +195,7 @@ public MRESReturn DHook_AddEventTwo(Handle hParams)
 public MRESReturn DHook_AddEventThree(Handle hParams)
 {
 	if(DHookIsNullParam(hParams, 5))
-	{
 		return MRES_Ignored;
-	}
 	
 	event_t event;
 	DHookGetParamString(hParams, 1, event.target, 64);
@@ -224,7 +221,7 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
 {
-		for(int i = 0; i < g_aPlayerEvents[client].Length; i++)
+	for(int i = 0; i < g_aPlayerEvents[client].Length; i++)
 	{
 		event_t event;
 		g_aPlayerEvents[client].GetArray(i, event);
