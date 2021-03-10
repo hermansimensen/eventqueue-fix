@@ -230,6 +230,11 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		{
 			SetVariantString(event.variantValue);
 			
+			if(!IsValidEntity(event.caller))
+			{
+				event.caller = event.activator;
+			}
+			
 			int targetEntity;
 			
 			if(!strcmp("!activator", event.target, false))
