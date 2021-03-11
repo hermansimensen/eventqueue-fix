@@ -34,6 +34,7 @@ enum struct event_t
 enum struct entity_t
 {
 	int outputID;
+	int caller;
 	float waitTime;
 }
 
@@ -243,10 +244,13 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 		{
 			g_aOutputWait[event.activator].GetArray(i, ent);
 			
-			if(ent.outputID == event.outputID)
+			if(ent.caller == event.caller)
 			{
-				bFound = true;
-				break;
+				if(ent.outputID == event.outputID)
+				{
+					bFound = true;
+					break;
+				}
 			}
 		}
 		
