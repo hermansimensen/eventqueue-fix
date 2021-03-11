@@ -216,9 +216,6 @@ public MRESReturn DHook_AddEventTwo(Handle hParams)
 
 public MRESReturn DHook_AddEventThree(Handle hParams)
 {
-	if(DHookIsNullParam(hParams, 5))
-		return MRES_Ignored;
-
 	event_t event;
 	DHookGetParamString(hParams, 1, event.target, 64);
 	DHookGetParamString(hParams, 2, event.targetInput, 64);
@@ -253,7 +250,7 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 			}
 		}
 		
-		if(!bFound || ent.waitTime <= 0.0)
+		if(!bFound)
 		{
 			g_aPlayerEvents[event.activator].PushArray(event);
 		
