@@ -16,6 +16,8 @@
 #pragma semicolon 1
 
 ArrayList g_aPlayerEvents[MAXPLAYERS+1];
+ArrayList g_aOutputWait[MAXPLAYERS+1];
+
 bool g_bLateLoad;
 
 enum struct event_t
@@ -27,6 +29,12 @@ enum struct event_t
 	int activator;
 	int caller;
 	int outputID;
+}
+
+enum struct entity_t
+{
+	int outputID;
+	float waitTime;
 }
 
 public Plugin myinfo =
@@ -46,7 +54,7 @@ public void OnPluginStart()
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
 	g_bLateLoad = late;
-	
+
 	return APLRes_Success;
 }
 
@@ -73,6 +81,15 @@ public void OnClientPutInServer(int client)
 	{
 		g_aPlayerEvents[client].Clear();
 	}
+
+	if(g_aOutputWait[client] == null)
+	{
+		g_aOutputWait[client] = new ArrayList(sizeof(entity_t));
+	}
+	else
+	{
+		g_aOutputWait[client].Clear();
+	}
 }
 
 public void OnClientDisconnect(int client)
@@ -82,17 +99,23 @@ public void OnClientDisconnect(int client)
 		g_aPlayerEvents[client].Clear();
 		delete g_aPlayerEvents[client];
 	}
+	
+	if(g_aOutputWait[client] != null)
+	{
+		g_aOutputWait[client].Clear();
+		delete g_aOutputWait[client];
+	}
 }
 
 void LoadDHooks()
 {
 	GameData gamedataConf = LoadGameConfigFile("eventfix.games");
-	
+
 	if(gamedataConf == null)
 	{
 		SetFailState("Failed to load eventfix gamedata");
 	}
-	
+
 	/*
 	Handle acceptInput = DHookCreateDetour(Address_Null, CallConv_THISCALL, ReturnType_Bool, ThisPointer_CBaseEntity);
 	DHookSetFromConf(acceptInput, gamedataConf, SDKConf_Signature, "AcceptInput");
@@ -102,8 +125,8 @@ void LoadDHooks()
 	DHookAddParam(acceptInput, HookParamType_Object, 20, DHookPass_ByVal|DHookPass_ODTOR|DHookPass_OCTOR|DHookPass_OASSIGNOP);
 	DHookAddParam(acceptInput, HookParamType_Int);
 	if(!DHookEnableDetour(acceptInput, false, DHook_AcceptInput))
-		SetFailState("Couldn't enable AcceptInput detour."); 
-		
+		SetFailState("Couldn't enable AcceptInput detour.");
+
 	Handle addEvent = DHookCreateDetour(Address_Null, CallConv_THISCALL, ReturnType_Void, ThisPointer_Ignore);
 	DHookSetFromConf(addEvent, gamedataConf, SDKConf_Signature, "AddEvent");
 	DHookAddParam(addEvent, HookParamType_CBaseEntity);
@@ -114,7 +137,7 @@ void LoadDHooks()
 	DHookAddParam(addEvent, HookParamType_Int);
 	if(!DHookEnableDetour(addEvent, false, DHook_AddEvent))
 		SetFailState("Couldn't enable AddEvent detour.");
-	
+
 	Handle addEventTwo = DHookCreateDetour(Address_Null, CallConv_THISCALL, ReturnType_Void, ThisPointer_Ignore);
 	DHookSetFromConf(addEventTwo, gamedataConf, SDKConf_Signature, "AddEventTwo");
 	DHookAddParam(addEventTwo, HookParamType_CBaseEntity);
@@ -125,8 +148,9 @@ void LoadDHooks()
 	DHookAddParam(addEventTwo, HookParamType_CBaseEntity);
 	DHookAddParam(addEventTwo, HookParamType_Int);
 	if(!DHookEnableDetour(addEventTwo, false, DHook_AddEventTwo))
-		SetFailState("Couldn't enable AddEventTwo detour.");*/
-	
+		SetFailState("Couldn't enable AddEventTwo detour.");
+	*/
+
 	Handle addEventThree = DHookCreateDetour(Address_Null, CallConv_THISCALL, ReturnType_Void, ThisPointer_Ignore);
 	DHookSetFromConf(addEventThree, gamedataConf, SDKConf_Signature, "AddEventThree");
 	DHookAddParam(addEventThree, HookParamType_CharPtr);
@@ -138,8 +162,7 @@ void LoadDHooks()
 	DHookAddParam(addEventThree, HookParamType_Int);
 	if(!DHookEnableDetour(addEventThree, false, DHook_AddEventThree))
 		SetFailState("Couldn't enable AddEventThree detour.");
-	
-	
+
 	delete gamedataConf;
 }
 
@@ -158,9 +181,9 @@ public MRESReturn DHook_AcceptInput(int pThis, Handle hReturn, Handle hParams)
 	ExplodeString(variantString, " ", args, 2, 64);
 
 
-	
+
 	return MRES_Ignored;
- } 
+ }
 
 public MRESReturn DHook_AddEvent(Handle hParams)
 {
@@ -171,11 +194,10 @@ public MRESReturn DHook_AddEvent(Handle hParams)
 	event.activator = DHookGetParam(hParams, 4);
 	event.caller = DHookGetParam(hParams, 5);
 	event.outputID = DHookGetParam(hParams, 6);
-	
+
 	PrintToChatAll("AddEvent: %i, %s, %f, %i, %i, %i", target, event.targetInput, event.delay, event.activator, event.caller, event.outputID);
 	return MRES_Ignored;
 }
-
 
 public MRESReturn DHook_AddEventTwo(Handle hParams)
 {
@@ -187,16 +209,16 @@ public MRESReturn DHook_AddEventTwo(Handle hParams)
 	event.activator = DHookGetParam(hParams, 5);
 	event.caller = DHookGetParam(hParams, 6);
 	event.outputID = DHookGetParam(hParams, 7);
-	
+
 	PrintToChatAll("AddEventTwo: %i, %s, %s, %f, %i, %i, %i", target, event.targetInput, event.variantValue, event.delay, event.activator, event.caller, event.outputID);
 	return MRES_Ignored;
-}*/
+} */
 
 public MRESReturn DHook_AddEventThree(Handle hParams)
 {
 	if(DHookIsNullParam(hParams, 5))
 		return MRES_Ignored;
-	
+
 	event_t event;
 	DHookGetParamString(hParams, 1, event.target, 64);
 	DHookGetParamString(hParams, 2, event.targetInput, 64);
@@ -205,78 +227,119 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 	event.activator = DHookGetParam(hParams, 5);
 	event.caller = DHookGetParam(hParams, 6);
 	event.outputID = DHookGetParam(hParams, 7);
-	
+
 	#if defined DEBUG
 		PrintToChatAll("AddEventThree: %s, %s, %s, %f, %i, %i, %i", event.target, event.targetInput, event.variantValue, event.delay, event.activator, event.caller, event.outputID);
 	#endif
-	
+
 	if((event.activator < 65 && event.activator > 0))
 	{
-		g_aPlayerEvents[event.activator].PushArray(event);
+		float m_flWait = 0.0;
+		if(!IsValidClient(event.caller))
+		{
+			m_flWait = GetEntPropFloat(event.caller, Prop_Data, "m_flWait");
+		}
+		
+		bool bFound;
+		entity_t ent;
+		for(int i = 0; i < g_aOutputWait[event.activator].Length; i++)
+		{
+			g_aOutputWait[event.activator].GetArray(i, ent);
+			
+			if(ent.outputID == event.outputID)
+			{
+				bFound = true;
+				break;
+			}
+		}
+		
+		if(!bFound || ent.waitTime <= 0.0)
+		{
+			g_aPlayerEvents[event.activator].PushArray(event);
+		
+			ent.outputID = event.outputID;
+			ent.waitTime = m_flWait;
+			g_aOutputWait[event.activator].PushArray(ent);
+		}
 		return MRES_Supercede;
 	}
-	
+
 	return MRES_Ignored;
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
 {
+	float timescale = Shavit_GetClientTimescale(client) != -1.0 ? Shavit_GetClientTimescale(client) : Shavit_GetStyleSettingFloat(Shavit_GetBhopStyle(client), "speed");
+	
+	for(int i = 0; i < g_aOutputWait[client].Length; i++)
+	{
+		entity_t ent;
+		g_aOutputWait[client].GetArray(i, ent);
+		
+		if(ent.waitTime <= 0.0)
+		{
+			g_aOutputWait[client].Erase(i);
+		}
+		else
+		{
+			ent.waitTime -= GetTickInterval() * timescale;
+			g_aOutputWait[client].SetArray(i, ent);
+		}
+	}
+	
 	for(int i = 0; i < g_aPlayerEvents[client].Length; i++)
 	{
 		event_t event;
 		g_aPlayerEvents[client].GetArray(i, event);
-		
+
 		if(event.delay <= 0.0)
 		{
 			SetVariantString(event.variantValue);
-			
+
 			if(!IsValidEntity(event.caller))
 			{
 				event.caller = event.activator;
 			}
-			
+
 			int targetEntity;
-			
+
 			if(!strcmp("!activator", event.target, false))
 			{
 				targetEntity = event.activator;
-				AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID); //right now I'm setting the client as the caller, because sourcemod freaks out if the caller isn't a regular CBaseEntity.
-			} 
+				AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
+			}
 			else if(!strcmp("!caller", event.target, false))
 			{
 				targetEntity = event.caller;
-				AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID); 
-			} 
+				AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
+			}
 			else
 			{
-				for (int entity = 0; entity < GetMaxEntities()*2; entity++) {
-					
+				for (int entity = 0; entity < GetMaxEntities(); entity++)
+				{
 					if (!IsValidEntity(entity)) {
 						continue;
 					}
-					
+
 					char buffer[64];
 					GetEntPropString(entity, Prop_Data, "m_iName", buffer, 64);
-					
-					if (!strcmp(event.target, buffer, false)) {
+
+					if (!strcmp(event.target, buffer, false))
+					{
 						targetEntity = entity;
 						AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
 					}
 				}
 			}
-			
-			//AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID); //right now I'm setting the client as the caller, because sourcemod freaks out if the caller isn't a regular CBaseEntity.
-			
+
 			#if defined DEBUG
 				PrintToChat(client, "Performing output: %s, %i, %i, %s %s, %i", event.target, targetEntity, event.caller, event.targetInput, event.variantValue, event.outputID);
 			#endif
-			
+
 			g_aPlayerEvents[client].Erase(i);
-		} 
+		}
 		else
 		{
-			float timescale = Shavit_GetClientTimescale(client) != -1.0 ? Shavit_GetClientTimescale(client) : Shavit_GetStyleSettingFloat(Shavit_GetBhopStyle(client), "speed");
-			
 			event.delay -= GetTickInterval() * timescale;
 			g_aPlayerEvents[client].SetArray(i, event);
 		}
