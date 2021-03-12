@@ -34,7 +34,6 @@ enum struct event_t
 enum struct entity_t
 {
 	int outputID;
-	int caller;
 	float waitTime;
 }
 
@@ -244,23 +243,27 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 		{
 			g_aOutputWait[event.activator].GetArray(i, ent);
 			
-			if(ent.caller == event.caller)
+			if(ent.outputID == event.outputID)
 			{
-				if(ent.outputID == event.outputID)
-				{
-					bFound = true;
-					break;
-				}
+				bFound = true;
+				break;
 			}
 		}
 		
 		if(!bFound)
 		{
 			g_aPlayerEvents[event.activator].PushArray(event);
-		
+			
 			ent.outputID = event.outputID;
 			ent.waitTime = m_flWait;
 			g_aOutputWait[event.activator].PushArray(ent);
+		}
+		else
+		{
+			if(ent.waitTime <= 0.0)
+			{
+				g_aPlayerEvents[event.activator].PushArray(event);
+			}
 		}
 		return MRES_Supercede;
 	}
@@ -304,6 +307,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 			int targetEntity;
 
+		
 			if(!strcmp("!activator", event.target, false))
 			{
 				targetEntity = event.activator;
