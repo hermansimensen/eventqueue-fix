@@ -301,7 +301,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		event_t event;
 		g_aPlayerEvents[client].GetArray(i, event);
 
-		if(event.delay <= 0.0)
+		if(event.delay <= GetTickInterval() * timescale)
 		{
 			SetVariantString(event.variantValue);
 
@@ -347,6 +347,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			#endif
 
 			g_aPlayerEvents[client].Erase(i);
+			i--;
 		}
 		else
 		{
