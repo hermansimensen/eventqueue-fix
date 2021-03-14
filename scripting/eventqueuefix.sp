@@ -33,7 +33,8 @@ enum struct event_t
 
 enum struct entity_t
 {
-	int outputID;
+	int caller;
+	int tick;
 	float waitTime;
 }
 
@@ -243,10 +244,13 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 		{
 			g_aOutputWait[event.activator].GetArray(i, ent);
 			
-			if(ent.outputID == event.outputID)
+			if(ent.caller == event.caller)
 			{
-				bFound = true;
-				break;
+				if(ent.tick != GetGameTickCount())
+				{
+					bFound = true;
+					break;
+				}
 			}
 		}
 		
@@ -254,7 +258,8 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 		{
 			g_aPlayerEvents[event.activator].PushArray(event);
 			
-			ent.outputID = event.outputID;
+			ent.caller = event.caller;
+			ent.tick = GetGameTickCount();
 			ent.waitTime = m_flWait;
 			g_aOutputWait[event.activator].PushArray(ent);
 		}
