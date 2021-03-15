@@ -33,8 +33,7 @@ enum struct event_t
 
 enum struct entity_t
 {
-	int caller;
-	int tick;
+	int outputID;
 	float waitTime;
 }
 
@@ -244,13 +243,10 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 		{
 			g_aOutputWait[event.activator].GetArray(i, ent);
 			
-			if(ent.caller == event.caller)
+			if(ent.outputID == event.outputID)
 			{
-				if(ent.tick != GetGameTickCount())
-				{
-					bFound = true;
-					break;
-				}
+				bFound = true;
+				break;
 			}
 		}
 		
@@ -258,22 +254,52 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 		{
 			g_aPlayerEvents[event.activator].PushArray(event);
 			
-			ent.caller = event.caller;
-			ent.tick = GetGameTickCount();
+			ent.outputID = event.outputID;
 			ent.waitTime = m_flWait;
-			g_aOutputWait[event.activator].PushArray(ent);
-		}
-		else
-		{
-			if(ent.waitTime <= 0.0)
-			{
-				g_aPlayerEvents[event.activator].PushArray(event);
-			}
+			g_aOutputWait[event.activator].PushArray(ent);	
 		}
 		return MRES_Supercede;
 	}
 
 	return MRES_Ignored;
+}
+
+public void ServiceEvent(event_t event)
+{
+	SetVariantString(event.variantValue);
+	int targetEntity;
+	if(!strcmp("!activator", event.target, false))
+	{
+		targetEntity = event.activator;
+		AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
+	}
+	else if(!strcmp("!caller", event.target, false))
+	{
+		targetEntity = event.caller;
+		AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
+	}
+	else
+	{
+		for (int entity = 0; entity < GetMaxEntities()*2; entity++)
+		{
+			if (!IsValidEntity(entity)) {
+				continue;
+			}
+			
+			char buffer[64];
+			GetEntPropString(entity, Prop_Data, "m_iName", buffer, 64);
+			
+			if (!strcmp(event.target, buffer, false))
+			{
+				targetEntity = entity;
+				AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
+			}
+		}
+	}
+	
+	#if defined DEBUG
+		PrintToChat(event.activator, "Performing output: %s, %i, %i, %s %s, %i, %f", event.target, targetEntity, event.caller, event.targetInput, event.variantValue, event.outputID, GetGameTime());
+	#endif
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
@@ -285,9 +311,10 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		entity_t ent;
 		g_aOutputWait[client].GetArray(i, ent);
 		
-		if(ent.waitTime <= 0.0)
+		if(ent.waitTime <= GetTickInterval() * timescale)
 		{
 			g_aOutputWait[client].Erase(i);
+			i--;
 		}
 		else
 		{
@@ -303,49 +330,12 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 		if(event.delay <= GetTickInterval() * timescale)
 		{
-			SetVariantString(event.variantValue);
-
 			if(!IsValidEntity(event.caller))
 			{
 				event.caller = event.activator;
 			}
 
-			int targetEntity;
-
-		
-			if(!strcmp("!activator", event.target, false))
-			{
-				targetEntity = event.activator;
-				AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
-			}
-			else if(!strcmp("!caller", event.target, false))
-			{
-				targetEntity = event.caller;
-				AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
-			}
-			else
-			{
-				for (int entity = 0; entity < GetMaxEntities(); entity++)
-				{
-					if (!IsValidEntity(entity)) {
-						continue;
-					}
-
-					char buffer[64];
-					GetEntPropString(entity, Prop_Data, "m_iName", buffer, 64);
-
-					if (!strcmp(event.target, buffer, false))
-					{
-						targetEntity = entity;
-						AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
-					}
-				}
-			}
-
-			#if defined DEBUG
-				PrintToChat(client, "Performing output: %s, %i, %i, %s %s, %i", event.target, targetEntity, event.caller, event.targetInput, event.variantValue, event.outputID);
-			#endif
-
+			ServiceEvent(event);
 			g_aPlayerEvents[client].Erase(i);
 			i--;
 		}
