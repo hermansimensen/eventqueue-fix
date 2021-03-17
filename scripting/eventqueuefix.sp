@@ -15,10 +15,22 @@
 
 #pragma semicolon 1
 
+#define	MAX_EDICT_BITS			11
+#define	MAX_EDICTS				(1 << MAX_EDICT_BITS)
+
+#define NUM_ENT_ENTRY_BITS		(MAX_EDICT_BITS + 2)
+#define NUM_ENT_ENTRIES			(1 << NUM_ENT_ENTRY_BITS)
+#define INVALID_EHANDLE_INDEX	0xFFFFFFFF
+
+#define NUM_SERIAL_NUM_BITS		16 // (32 - NUM_ENT_ENTRY_BITS)
+#define NUM_SERIAL_NUM_SHIFT_BITS (32 - NUM_SERIAL_NUM_BITS)
+#define ENT_ENTRY_MASK			(( 1 << NUM_SERIAL_NUM_BITS) - 1)
+
 ArrayList g_aPlayerEvents[MAXPLAYERS+1];
 ArrayList g_aOutputWait[MAXPLAYERS+1];
-
 bool g_bLateLoad;
+Handle g_hFindEntityByName;
+int g_iRefOffset;
 
 enum struct event_t
 {
@@ -33,7 +45,7 @@ enum struct event_t
 
 enum struct entity_t
 {
-	int outputID;
+	int caller;
 	float waitTime;
 }
 
@@ -49,6 +61,7 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	LoadDHooks();
+	HookEntityOutput("trigger_multiple", "OnTrigger", OnTrigger);
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -77,11 +90,12 @@ public void OnClientPutInServer(int client)
 	if(g_aPlayerEvents[client] == null)
 	{
 		g_aPlayerEvents[client] = new ArrayList(sizeof(event_t));
-	} else
+	} 
+	else
 	{
 		g_aPlayerEvents[client].Clear();
 	}
-
+	
 	if(g_aOutputWait[client] == null)
 	{
 		g_aOutputWait[client] = new ArrayList(sizeof(entity_t));
@@ -115,6 +129,21 @@ void LoadDHooks()
 	{
 		SetFailState("Failed to load eventfix gamedata");
 	}
+	
+	int m_RefEHandleOff = gamedataConf.GetOffset("m_RefEHandle");
+	int ibuff = gamedataConf.GetOffset("m_angRotation");
+	g_iRefOffset = ibuff + m_RefEHandleOff;
+	
+	StartPrepSDKCall(SDKCall_Static);
+	PrepSDKCall_SetFromConf(gamedataConf, SDKConf_Signature, "FindEntityByName");
+	PrepSDKCall_SetReturnInfo(SDKType_CBaseEntity, SDKPass_Pointer);
+	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer, VDECODE_FLAG_ALLOWNULL | VDECODE_FLAG_ALLOWWORLD);
+	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
+	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer, VDECODE_FLAG_ALLOWNULL | VDECODE_FLAG_ALLOWWORLD);
+	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer, VDECODE_FLAG_ALLOWNULL | VDECODE_FLAG_ALLOWWORLD);
+	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer, VDECODE_FLAG_ALLOWNULL | VDECODE_FLAG_ALLOWWORLD);
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
+	g_hFindEntityByName = EndPrepSDKCall();
 
 	/*
 	Handle acceptInput = DHookCreateDetour(Address_Null, CallConv_THISCALL, ReturnType_Bool, ThisPointer_CBaseEntity);
@@ -157,7 +186,7 @@ void LoadDHooks()
 	DHookAddParam(addEventThree, HookParamType_CharPtr);
 	DHookAddParam(addEventThree, HookParamType_Object, 20, DHookPass_ByVal|DHookPass_ODTOR|DHookPass_OCTOR|DHookPass_OASSIGNOP);
 	DHookAddParam(addEventThree, HookParamType_Float);
-	DHookAddParam(addEventThree, HookParamType_CBaseEntity);
+	DHookAddParam(addEventThree, HookParamType_Int);
 	DHookAddParam(addEventThree, HookParamType_CBaseEntity);
 	DHookAddParam(addEventThree, HookParamType_Int);
 	if(!DHookEnableDetour(addEventThree, false, DHook_AddEventThree))
@@ -214,6 +243,27 @@ public MRESReturn DHook_AddEventTwo(Handle hParams)
 	return MRES_Ignored;
 } */
 
+//Credits to gammacase for this workaround.
+int EntityToBCompatRef(Address player)
+{
+	if(player == Address_Null)
+		return INVALID_EHANDLE_INDEX;
+	
+	int m_RefEHandle = LoadFromAddress(player + view_as<Address>(g_iRefOffset), NumberType_Int32);
+	
+	if(m_RefEHandle == INVALID_EHANDLE_INDEX)
+		return INVALID_EHANDLE_INDEX;
+	
+	// https://github.com/perilouswithadollarsign/cstrike15_src/blob/29e4c1fda9698d5cebcdaf1a0de4b829fa149bf8/public/basehandle.h#L137
+	int entry_idx = m_RefEHandle & ENT_ENTRY_MASK;
+	
+	if(entry_idx >= MAX_EDICTS)
+		return m_RefEHandle | (1 << 31);
+	
+	return entry_idx;
+}
+
+
 public MRESReturn DHook_AddEventThree(Handle hParams)
 {
 	event_t event;
@@ -221,29 +271,36 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 	DHookGetParamString(hParams, 2, event.targetInput, 64);
 	DHookGetParamObjectPtrString(hParams, 3, 0, ObjectValueType_String, event.variantValue, sizeof(event.variantValue));
 	event.delay = DHookGetParam(hParams, 4);
-	event.activator = DHookGetParam(hParams, 5);
+	event.activator = EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 5)));
 	event.caller = DHookGetParam(hParams, 6);
 	event.outputID = DHookGetParam(hParams, 7);
-
+	
 	#if defined DEBUG
 		PrintToChatAll("AddEventThree: %s, %s, %s, %f, %i, %i, %i", event.target, event.targetInput, event.variantValue, event.delay, event.activator, event.caller, event.outputID);
 	#endif
-
+	
 	if((event.activator < 65 && event.activator > 0))
 	{
-		float m_flWait = 0.0;
-		if(!IsValidClient(event.caller))
-		{
-			m_flWait = GetEntPropFloat(event.caller, Prop_Data, "m_flWait");
-		}
+		g_aPlayerEvents[event.activator].PushArray(event);
+		return MRES_Supercede;
+	}
+
+	return MRES_Ignored;
+}
+
+public Action OnTrigger(const char[] output, int caller, int activator, float delay)
+{
+	if(activator <= MAXPLAYERS && activator > 0)
+	{
+		float m_flWait = GetEntPropFloat(caller, Prop_Data, "m_flWait");
 		
 		bool bFound;
 		entity_t ent;
-		for(int i = 0; i < g_aOutputWait[event.activator].Length; i++)
+		for(int i = 0; i < g_aOutputWait[activator].Length; i++)
 		{
-			g_aOutputWait[event.activator].GetArray(i, ent);
+			g_aOutputWait[activator].GetArray(i, ent);
 			
-			if(ent.outputID == event.outputID)
+			if(caller == ent.caller)
 			{
 				bFound = true;
 				break;
@@ -252,16 +309,17 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 		
 		if(!bFound)
 		{
-			g_aPlayerEvents[event.activator].PushArray(event);
-			
-			ent.outputID = event.outputID;
+			ent.caller = caller;
 			ent.waitTime = m_flWait;
-			g_aOutputWait[event.activator].PushArray(ent);	
+			g_aOutputWait[activator].PushArray(ent);	
+			return Plugin_Continue;
 		}
-		return MRES_Supercede;
-	}
-
-	return MRES_Ignored;
+		else
+		{
+			return Plugin_Handled;
+		}
+	} 
+	return Plugin_Continue;
 }
 
 public void ServiceEvent(event_t event)
@@ -278,25 +336,37 @@ public void ServiceEvent(event_t event)
 		targetEntity = event.caller;
 		AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
 	}
+	else if(!strcmp("!self", event.target, false))
+	{
+		targetEntity = event.caller;
+		AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
+	}
 	else
 	{
-		for (int entity = 0; entity < GetMaxEntities()*2; entity++)
+		if(!strcmp("kill", event.targetInput, false))
 		{
-			if (!IsValidEntity(entity)) {
-				continue;
-			}
-			
-			char buffer[64];
-			GetEntPropString(entity, Prop_Data, "m_iName", buffer, 64);
-			
-			if (!strcmp(event.target, buffer, false))
+			for(int i = 0; i < 32; i++)
 			{
-				targetEntity = entity;
+				targetEntity = SDKCall(g_hFindEntityByName, 0, event.target, event.caller, event.activator, event.caller, NULL_STRING);
+				if(targetEntity != -1)
+				{
+					AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
+				} else
+				{
+					break;
+				}
+			}
+		} 
+		else
+		{
+			targetEntity = SDKCall(g_hFindEntityByName, 0, event.target, event.caller, event.activator, event.caller, NULL_STRING);
+			if(targetEntity != -1)
+			{
 				AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
 			}
 		}
 	}
-	
+
 	#if defined DEBUG
 		PrintToChat(event.activator, "Performing output: %s, %i, %i, %s %s, %i, %f", event.target, targetEntity, event.caller, event.targetInput, event.variantValue, event.outputID, GetGameTime());
 	#endif
