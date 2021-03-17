@@ -15,16 +15,16 @@
 
 #pragma semicolon 1
 
-#define	MAX_EDICT_BITS			11
-#define	MAX_EDICTS				(1 << MAX_EDICT_BITS)
+// How many bits to use to encode an edict.
+#define    MAX_EDICT_BITS                11            // # of bits needed to represent max edicts
+// Max # of edicts in a level
+#define    MAX_EDICTS                    (1<<MAX_EDICT_BITS)
 
-#define NUM_ENT_ENTRY_BITS		(MAX_EDICT_BITS + 2)
-#define NUM_ENT_ENTRIES			(1 << NUM_ENT_ENTRY_BITS)
-#define INVALID_EHANDLE_INDEX	0xFFFFFFFF
-
-#define NUM_SERIAL_NUM_BITS		16 // (32 - NUM_ENT_ENTRY_BITS)
-#define NUM_SERIAL_NUM_SHIFT_BITS (32 - NUM_SERIAL_NUM_BITS)
-#define ENT_ENTRY_MASK			(( 1 << NUM_SERIAL_NUM_BITS) - 1)
+// Used for networking ehandles.
+#define NUM_ENT_ENTRY_BITS        (MAX_EDICT_BITS + 1)
+#define NUM_ENT_ENTRIES            (1 << NUM_ENT_ENTRY_BITS)
+#define ENT_ENTRY_MASK            (NUM_ENT_ENTRIES - 1)
+#define INVALID_EHANDLE_INDEX    0xFFFFFFFF
 
 ArrayList g_aPlayerEvents[MAXPLAYERS+1];
 ArrayList g_aOutputWait[MAXPLAYERS+1];
@@ -111,7 +111,6 @@ public void OnClientDisconnect(int client)
 	if(g_aPlayerEvents[client] != null)
 	{
 		g_aPlayerEvents[client].Clear();
-		delete g_aPlayerEvents[client];
 	}
 	
 	if(g_aOutputWait[client] != null)
@@ -134,7 +133,14 @@ void LoadDHooks()
 	int ibuff = gamedataConf.GetOffset("m_angRotation");
 	g_iRefOffset = ibuff + m_RefEHandleOff;
 	
-	StartPrepSDKCall(SDKCall_Static);
+	if(GetEngineVersion() == Engine_CSS)
+	{
+		StartPrepSDKCall(SDKCall_EntityList);
+	}
+	else
+	{
+		StartPrepSDKCall(SDKCall_Static);
+	}
 	PrepSDKCall_SetFromConf(gamedataConf, SDKConf_Signature, "FindEntityByName");
 	PrepSDKCall_SetReturnInfo(SDKType_CBaseEntity, SDKPass_Pointer);
 	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer, VDECODE_FLAG_ALLOWNULL | VDECODE_FLAG_ALLOWWORLD);
@@ -263,7 +269,6 @@ int EntityToBCompatRef(Address player)
 	return entry_idx;
 }
 
-
 public MRESReturn DHook_AddEventThree(Handle hParams)
 {
 	event_t event;
@@ -347,7 +352,7 @@ public void ServiceEvent(event_t event)
 		{
 			for(int i = 0; i < 32; i++)
 			{
-				targetEntity = SDKCall(g_hFindEntityByName, 0, event.target, event.caller, event.activator, event.caller, NULL_STRING);
+				targetEntity = SDKCall(g_hFindEntityByName, 0, event.target, event.caller, event.activator, event.caller, 0);
 				if(targetEntity != -1)
 				{
 					AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
@@ -359,7 +364,7 @@ public void ServiceEvent(event_t event)
 		} 
 		else
 		{
-			targetEntity = SDKCall(g_hFindEntityByName, 0, event.target, event.caller, event.activator, event.caller, NULL_STRING);
+			targetEntity = SDKCall(g_hFindEntityByName, 0, event.target, event.caller, event.activator, event.caller, 0);
 			if(targetEntity != -1)
 			{
 				AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
@@ -400,11 +405,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 		if(event.delay <= GetTickInterval() * timescale)
 		{
-			if(!IsValidEntity(event.caller))
-			{
-				event.caller = event.activator;
-			}
-
 			ServiceEvent(event);
 			g_aPlayerEvents[client].Erase(i);
 			i--;

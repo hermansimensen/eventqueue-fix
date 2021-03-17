@@ -72,8 +72,8 @@
 			}
 			"m_RefEHandle"
 			{
-				"windows"	"32"
-				"linux"		"32"
+				"windows"	"12"
+				"linux"		"12"
 			}
 		}
 	}
