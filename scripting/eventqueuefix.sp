@@ -349,7 +349,7 @@ public void ServiceEvent(event_t event)
 	{
 		if(!strcmp("kill", event.targetInput, false))
 		{
-			for(int i = 0; i < 32; i++)
+			for(int i = 0; i < 4; i++)
 			{
 				targetEntity = SDKCall(g_hFindEntityByName, 0, event.target, event.caller, event.activator, event.caller, 0);
 				if(targetEntity != -1)
@@ -357,17 +357,48 @@ public void ServiceEvent(event_t event)
 					AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
 				} else
 				{
-					break;
+					//sometimes the call fails and we must use this slower method for now.
+					for(int y = 0; y < GetMaxEntities()*2; y++)
+					{
+						char name[32];
+						
+						if(IsValidEntity(y))
+							GetEntPropString(y, Prop_Data, "m_iName", name, sizeof(name));
+						
+						if(!strcmp(event.target, name, false))
+						{
+							AcceptEntityInput(y, event.targetInput, event.activator, event.caller, event.outputID);
+							break;
+						}
+					}
 				}
 			}
 		} 
 		else
 		{
-			targetEntity = SDKCall(g_hFindEntityByName, 0, event.target, event.caller, event.activator, event.caller, 0);
+			targetEntity = SDKCall(g_hFindEntityByName, -1, event.target, -1, -1, -1, 0);
 			if(targetEntity != -1)
 			{
 				AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
+			} 
+			else
+			{
+				//if we still can't find the target use this slower method.
+				for(int i = 0; i < GetMaxEntities()*2; i++)
+				{
+					char name[32];
+				
+					if(IsValidEntity(i))
+					GetEntPropString(i, Prop_Data, "m_iName", name, sizeof(name));
+				
+					if(!strcmp(event.target, name, false))
+					{
+						AcceptEntityInput(i, event.targetInput, event.activator, event.caller, event.outputID);
+						break;
+					}
+				}
 			}
+			
 		}
 	}
 
@@ -401,7 +432,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	{
 		event_t event;
 		g_aPlayerEvents[client].GetArray(i, event);
-
 		if(event.delay <= GetTickInterval() * timescale)
 		{
 			ServiceEvent(event);
