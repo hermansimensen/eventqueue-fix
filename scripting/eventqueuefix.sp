@@ -141,13 +141,13 @@ void LoadDHooks()
 	#endif
 	
 	PrepSDKCall_SetFromConf(gamedataConf, SDKConf_Signature, "FindEntityByName");
-	PrepSDKCall_SetReturnInfo(SDKType_CBaseEntity, SDKPass_Pointer);
+	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_ByValue);
 	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer, VDECODE_FLAG_ALLOWNULL | VDECODE_FLAG_ALLOWWORLD);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer, VDECODE_FLAG_ALLOWNULL | VDECODE_FLAG_ALLOWWORLD);
 	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer, VDECODE_FLAG_ALLOWNULL | VDECODE_FLAG_ALLOWWORLD);
 	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer, VDECODE_FLAG_ALLOWNULL | VDECODE_FLAG_ALLOWWORLD);
-	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_ByValue); 
 	g_hFindEntityByName = EndPrepSDKCall();
 
 	/*
@@ -326,82 +326,44 @@ public Action OnTrigger(const char[] output, int caller, int activator, float de
 	return Plugin_Continue;
 }
 
+int FindEntityByName(int startEntity, char[] targetname, int searchingEnt, int activator, int caller)
+{
+	Address targetEntityAddr = SDKCall(g_hFindEntityByName, startEntity, targetname, searchingEnt, activator, caller, 0);
+	
+	if(targetEntityAddr == Address_Null)
+		return -1;
+		
+	return EntRefToEntIndex(EntityToBCompatRef(targetEntityAddr));
+}
+
 public void ServiceEvent(event_t event)
 {
 	SetVariantString(event.variantValue);
-	int targetEntity;
-	if(!strcmp("!activator", event.target, false))
+	int targetEntity = FindEntityByName(-1, event.target, event.caller, event.activator, event.caller);
+	
+	if(targetEntity != -1)
 	{
-		targetEntity = event.activator;
-		AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
-	}
-	else if(!strcmp("!caller", event.target, false))
-	{
-		targetEntity = event.caller;
-		AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
-	}
-	else if(!strcmp("!self", event.target, false))
-	{
-		targetEntity = event.caller;
-		AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
-	}
-	else
-	{
+		
 		if(!strcmp("kill", event.targetInput, false))
 		{
-			for(int i = 0; i < 4; i++)
-			{
-				targetEntity = SDKCall(g_hFindEntityByName, 0, event.target, event.caller, event.activator, event.caller, 0);
-				if(targetEntity != -1)
-				{
-					AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
-				} else
-				{
-					//sometimes the call fails and we must use this slower method for now.
-					for(int y = 0; y < GetMaxEntities()*2; y++)
+			for(int i = 0; i < 16; i++)
+			{				
+					targetEntity = FindEntityByName(-1, event.target, event.caller, event.activator, event.caller);
+					if(targetEntity != -1)
 					{
-						char name[32];
-						
-						if(IsValidEntity(y))
-							GetEntPropString(y, Prop_Data, "m_iName", name, sizeof(name));
-						
-						if(!strcmp(event.target, name, false))
-						{
-							AcceptEntityInput(y, event.targetInput, event.activator, event.caller, event.outputID);
-							break;
-						}
-					}
-				}
+						PrintToChat(event.activator, "killing!");
+						AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
+					} else 
+						break;
 			}
-		} 
+		}
 		else
 		{
-			targetEntity = SDKCall(g_hFindEntityByName, -1, event.target, -1, -1, -1, 0);
-			if(targetEntity != -1)
-			{
-				AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
-			} 
-			else
-			{
-				//if we still can't find the target use this slower method.
-				for(int i = 0; i < GetMaxEntities()*2; i++)
-				{
-					char name[32];
-				
-					if(IsValidEntity(i))
-					GetEntPropString(i, Prop_Data, "m_iName", name, sizeof(name));
-				
-					if(!strcmp(event.target, name, false))
-					{
-						AcceptEntityInput(i, event.targetInput, event.activator, event.caller, event.outputID);
-						break;
-					}
-				}
-			}
-			
+			AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
 		}
-	}
-
+		
+	} 
+	
 	#if defined DEBUG
 		PrintToChat(event.activator, "Performing output: %s, %i, %i, %s %s, %i, %f", event.target, targetEntity, event.caller, event.targetInput, event.variantValue, event.outputID, GetGameTime());
 	#endif
