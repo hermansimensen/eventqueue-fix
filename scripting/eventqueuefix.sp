@@ -351,7 +351,6 @@ public void ServiceEvent(event_t event)
 					targetEntity = FindEntityByName(-1, event.target, event.caller, event.activator, event.caller);
 					if(targetEntity != -1)
 					{
-						PrintToChat(event.activator, "killing!");
 						AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
 					} else 
 						break;
