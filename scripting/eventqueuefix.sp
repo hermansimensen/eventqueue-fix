@@ -13,6 +13,7 @@
 #include <sdkhooks>
 #include <dhooks>
 #include <shavit>
+#include <eventqueuefix>
 
 #pragma semicolon 1
 
@@ -32,17 +33,6 @@ ArrayList g_aOutputWait[MAXPLAYERS+1];
 bool g_bLateLoad;
 Handle g_hFindEntityByName;
 int g_iRefOffset;
-
-enum struct event_t
-{
-	char target[64];
-	char targetInput[64];
-	char variantValue[64];
-	float delay;
-	int activator;
-	int caller;
-	int outputID;
-}
 
 enum struct entity_t
 {
@@ -67,6 +57,11 @@ public void OnPluginStart()
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
+	CreateNative("GetClientEvents", Native_GetClientEvents);
+	CreateNative("SetClientEvents", Native_SetClientEvents);
+	
+	MarkNativeAsOptional("GetClientEvents");
+	MarkNativeAsOptional("SetClientEvents");
 	g_bLateLoad = late;
 	
 	return APLRes_Success;
@@ -389,4 +384,37 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			g_aPlayerEvents[client].SetArray(i, event);
 		}
 	}
+}
+
+public any Native_GetClientEvents(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	if(!IsValidClient(client))
+		return false;
+		
+	eventpack_t ep;
+	ep.playerEvents = view_as<ArrayList>(CloneHandle(g_aPlayerEvents[client].Clone()));
+	ep.outputWaits = view_as<ArrayList>(CloneHandle(g_aOutputWait[client].Clone()));
+	
+	SetNativeArray(2, ep, sizeof(eventpack_t));
+	return true;
+}
+
+public any Native_SetClientEvents(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	if(!IsValidClient(client))
+		return false;
+		
+	eventpack_t ep;
+	GetNativeArray(2, ep, sizeof(eventpack_t));
+	
+	delete g_aPlayerEvents[client];
+	
+	ArrayList playerEvents = view_as<ArrayList>(CloneHandle(ep.playerEvents));
+	
+	g_aPlayerEvents[client] = playerEvents.Clone();
+	delete playerEvents;
+	
+	return true;
 }
