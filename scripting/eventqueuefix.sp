@@ -68,7 +68,7 @@ public void OnPluginStart()
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
 	g_bLateLoad = late;
-
+	
 	return APLRes_Success;
 }
 
@@ -339,33 +339,17 @@ int FindEntityByName(int startEntity, char[] targetname, int searchingEnt, int a
 public void ServiceEvent(event_t event)
 {
 	SetVariantString(event.variantValue);
-	int targetEntity = FindEntityByName(-1, event.target, event.caller, event.activator, event.caller);
+	int targetEntity = -1;
 	
-	if(targetEntity != -1)
+	// In the context of the event, the searching entity is also the caller
+	while ((targetEntity = FindEntityByName(targetEntity, event.target, event.caller, event.activator, event.caller)) != -1)
 	{
+		AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
 		
-		if(!strcmp("kill", event.targetInput, false))
-		{
-			for(int i = 0; i < 16; i++)
-			{				
-					targetEntity = FindEntityByName(-1, event.target, event.caller, event.activator, event.caller);
-					if(targetEntity != -1)
-					{
-						AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
-					} else 
-						break;
-			}
-		}
-		else
-		{
-			AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
-		}
-		
+		#if defined DEBUG
+			PrintToChat(event.activator, "Performing output: %s, %i, %i, %s %s, %i, %f", event.target, targetEntity, event.caller, event.targetInput, event.variantValue, event.outputID, GetGameTime());
+		#endif
 	} 
-	
-	#if defined DEBUG
-		PrintToChat(event.activator, "Performing output: %s, %i, %i, %s %s, %i, %f", event.target, targetEntity, event.caller, event.targetInput, event.variantValue, event.outputID, GetGameTime());
-	#endif
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
