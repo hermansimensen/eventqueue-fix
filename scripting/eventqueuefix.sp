@@ -12,7 +12,6 @@
 #include <sdktools>
 #include <sdkhooks>
 #include <dhooks>
-#include <shavit>
 #include <eventqueuefix>
 
 #pragma semicolon 1
@@ -28,11 +27,18 @@
 #define ENT_ENTRY_MASK            (NUM_ENT_ENTRIES - 1)
 #define INVALID_EHANDLE_INDEX    0xFFFFFFFF
 
+//bhoptimer natives.
+native int Shavit_GetBhopStyle(int client);
+native float Shavit_GetStyleSettingFloat(int style, const char[] key);
+native float Shavit_GetClientTimescale(int client);
+
 ArrayList g_aPlayerEvents[MAXPLAYERS+1];
 ArrayList g_aOutputWait[MAXPLAYERS+1];
 bool g_bLateLoad;
 Handle g_hFindEntityByName;
 int g_iRefOffset;
+
+bool g_bBhopTimer;
 
 enum struct entity_t
 {
@@ -55,11 +61,37 @@ public void OnPluginStart()
 	HookEntityOutput("trigger_multiple", "OnTrigger", OnTrigger);
 }
 
+public void OnAllPluginsLoaded()
+{
+	if(GetFeatureStatus(FeatureType_Native, "Shavit_GetBhopStyle") != FeatureStatus_Unknown)
+	{
+		g_bBhopTimer = true;
+	} else g_bBhopTimer = false;
+	
+	if(GetFeatureStatus(FeatureType_Native, "Shavit_GetClientTimescale") != FeatureStatus_Unknown)
+	{
+		g_bBhopTimer = true;
+	} else g_bBhopTimer = false;
+	
+	//This is the latest added native, so we check this one last.
+	if(GetFeatureStatus(FeatureType_Native, "Shavit_GetStyleSettingFloat") != FeatureStatus_Unknown)
+	{
+		g_bBhopTimer = true;
+	} else g_bBhopTimer = false;
+	
+	if(g_bBhopTimer)
+	{
+		PrintToServer("[EventQueueFix] Found compatible timer: Bhoptimer.");
+	} 
+}
+
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
 	CreateNative("GetClientEvents", Native_GetClientEvents);
 	CreateNative("SetClientEvents", Native_SetClientEvents);
 	g_bLateLoad = late;
+	
+	RegPluginLibrary("eventqueuefix");
 	
 	return APLRes_Success;
 }
@@ -142,41 +174,6 @@ void LoadDHooks()
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_ByValue); 
 	g_hFindEntityByName = EndPrepSDKCall();
 
-	/*
-	Handle acceptInput = DHookCreateDetour(Address_Null, CallConv_THISCALL, ReturnType_Bool, ThisPointer_CBaseEntity);
-	DHookSetFromConf(acceptInput, gamedataConf, SDKConf_Signature, "AcceptInput");
-	DHookAddParam(acceptInput, HookParamType_CharPtr);
-	DHookAddParam(acceptInput, HookParamType_CBaseEntity);
-	DHookAddParam(acceptInput, HookParamType_CBaseEntity);
-	DHookAddParam(acceptInput, HookParamType_Object, 20, DHookPass_ByVal|DHookPass_ODTOR|DHookPass_OCTOR|DHookPass_OASSIGNOP);
-	DHookAddParam(acceptInput, HookParamType_Int);
-	if(!DHookEnableDetour(acceptInput, false, DHook_AcceptInput))
-		SetFailState("Couldn't enable AcceptInput detour.");
-
-	Handle addEvent = DHookCreateDetour(Address_Null, CallConv_THISCALL, ReturnType_Void, ThisPointer_Ignore);
-	DHookSetFromConf(addEvent, gamedataConf, SDKConf_Signature, "AddEvent");
-	DHookAddParam(addEvent, HookParamType_CBaseEntity);
-	DHookAddParam(addEvent, HookParamType_CharPtr);
-	DHookAddParam(addEvent, HookParamType_Float);
-	DHookAddParam(addEvent, HookParamType_CBaseEntity);
-	DHookAddParam(addEvent, HookParamType_CBaseEntity);
-	DHookAddParam(addEvent, HookParamType_Int);
-	if(!DHookEnableDetour(addEvent, false, DHook_AddEvent))
-		SetFailState("Couldn't enable AddEvent detour.");
-
-	Handle addEventTwo = DHookCreateDetour(Address_Null, CallConv_THISCALL, ReturnType_Void, ThisPointer_Ignore);
-	DHookSetFromConf(addEventTwo, gamedataConf, SDKConf_Signature, "AddEventTwo");
-	DHookAddParam(addEventTwo, HookParamType_CBaseEntity);
-	DHookAddParam(addEventTwo, HookParamType_CharPtr);
-	DHookAddParam(addEventTwo, HookParamType_Object, 20, DHookPass_ByVal|DHookPass_ODTOR|DHookPass_OCTOR|DHookPass_OASSIGNOP);
-	DHookAddParam(addEventTwo, HookParamType_Float);
-	DHookAddParam(addEventTwo, HookParamType_CBaseEntity);
-	DHookAddParam(addEventTwo, HookParamType_CBaseEntity);
-	DHookAddParam(addEventTwo, HookParamType_Int);
-	if(!DHookEnableDetour(addEventTwo, false, DHook_AddEventTwo))
-		SetFailState("Couldn't enable AddEventTwo detour.");
-	*/
-
 	Handle addEventThree = DHookCreateDetour(Address_Null, CallConv_THISCALL, ReturnType_Void, ThisPointer_Ignore);
 	DHookSetFromConf(addEventThree, gamedataConf, SDKConf_Signature, "AddEventThree");
 	DHookAddParam(addEventThree, HookParamType_CharPtr);
@@ -184,61 +181,13 @@ void LoadDHooks()
 	DHookAddParam(addEventThree, HookParamType_Object, 20, DHookPass_ByVal|DHookPass_ODTOR|DHookPass_OCTOR|DHookPass_OASSIGNOP);
 	DHookAddParam(addEventThree, HookParamType_Float);
 	DHookAddParam(addEventThree, HookParamType_Int);
-	DHookAddParam(addEventThree, HookParamType_CBaseEntity);
+	DHookAddParam(addEventThree, HookParamType_Int);
 	DHookAddParam(addEventThree, HookParamType_Int);
 	if(!DHookEnableDetour(addEventThree, false, DHook_AddEventThree))
 		SetFailState("Couldn't enable AddEventThree detour.");
 
 	delete gamedataConf;
 }
-
-/*
-public MRESReturn DHook_AcceptInput(int pThis, Handle hReturn, Handle hParams)
-{
-	if(DHookIsNullParam(hParams, 2))
-		return MRES_Ignored;
-
-	int client = DHookGetParam(hParams, 2);
-	char input[64];
-	DHookGetParamString(hParams, 1, input, 64);
-	char variantString[64];
-	DHookGetParamObjectPtrString(hParams, 4, 0, ObjectValueType_String, variantString, 64);
-	char args[2][64];
-	ExplodeString(variantString, " ", args, 2, 64);
-
-
-
-	return MRES_Ignored;
- }
-
-public MRESReturn DHook_AddEvent(Handle hParams)
-{
-	event_t event;
-	int target = DHookGetParam(hParams, 1);
-	DHookGetParamString(hParams, 2, event.targetInput, 64);
-	event.delay = DHookGetParam(hParams, 3);
-	event.activator = DHookGetParam(hParams, 4);
-	event.caller = DHookGetParam(hParams, 5);
-	event.outputID = DHookGetParam(hParams, 6);
-
-	PrintToChatAll("AddEvent: %i, %s, %f, %i, %i, %i", target, event.targetInput, event.delay, event.activator, event.caller, event.outputID);
-	return MRES_Ignored;
-}
-
-public MRESReturn DHook_AddEventTwo(Handle hParams)
-{
-	event_t event;
-	int target = DHookGetParam(hParams, 1);
-	DHookGetParamString(hParams, 2, event.targetInput, 64);
-	DHookGetParamObjectPtrString(hParams, 3, 0, ObjectValueType_String, event.variantValue, sizeof(event.variantValue));
-	event.delay = DHookGetParam(hParams, 4);
-	event.activator = DHookGetParam(hParams, 5);
-	event.caller = DHookGetParam(hParams, 6);
-	event.outputID = DHookGetParam(hParams, 7);
-
-	PrintToChatAll("AddEventTwo: %i, %s, %s, %f, %i, %i, %i", target, event.targetInput, event.variantValue, event.delay, event.activator, event.caller, event.outputID);
-	return MRES_Ignored;
-} */
 
 //Credits to gammacase for this workaround.
 int EntityToBCompatRef(Address player)
@@ -267,8 +216,8 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 	DHookGetParamString(hParams, 2, event.targetInput, 64);
 	DHookGetParamObjectPtrString(hParams, 3, 0, ObjectValueType_String, event.variantValue, sizeof(event.variantValue));
 	event.delay = DHookGetParam(hParams, 4);
-	event.activator = EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 5)));
-	event.caller = DHookGetParam(hParams, 6);
+	event.activator = EntRefToEntIndex(EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 5))));
+	event.caller = EntRefToEntIndex(EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 6))));
 	event.outputID = DHookGetParam(hParams, 7);
 	
 	#if defined DEBUG
@@ -346,7 +295,10 @@ public void ServiceEvent(event_t event)
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
 {
-	float timescale = Shavit_GetClientTimescale(client) != -1.0 ? Shavit_GetClientTimescale(client) : Shavit_GetStyleSettingFloat(Shavit_GetBhopStyle(client), "speed");
+	float timescale = 1.0;
+	
+	if(g_bBhopTimer)
+		timescale = Shavit_GetClientTimescale(client) != -1.0 ? Shavit_GetClientTimescale(client) : Shavit_GetStyleSettingFloat(Shavit_GetBhopStyle(client), "speed");
 	
 	for(int i = 0; i < g_aOutputWait[client].Length; i++)
 	{
@@ -386,7 +338,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 public any Native_GetClientEvents(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
-	if(!IsValidClient(client))
+	if(client < 0 || client > MaxClients || !IsClientConnected(client) || !IsClientInGame(client) || IsClientSourceTV(client))
 		return false;
 		
 	eventpack_t ep;
@@ -400,7 +352,8 @@ public any Native_GetClientEvents(Handle plugin, int numParams)
 public any Native_SetClientEvents(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
-	if(!IsValidClient(client))
+	
+	if(client < 0 || client > MaxClients || !IsClientConnected(client) || !IsClientInGame(client) || IsClientSourceTV(client))
 		return false;
 		
 	eventpack_t ep;
