@@ -3,6 +3,17 @@
 #endif
 #define _eventqueuefix_included
 
+public SharedPlugin __pl_eventqueuefix = 
+{
+    name = "eventqueuefix",
+    file = "eventqueuefix.smx",
+#if defined REQUIRE_PLUGIN
+    required = 1,
+#else
+    required = 0,
+#endif
+};
+
 enum struct event_t
 {
 	char target[64];
