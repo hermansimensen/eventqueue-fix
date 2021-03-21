@@ -59,9 +59,6 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 {
 	CreateNative("GetClientEvents", Native_GetClientEvents);
 	CreateNative("SetClientEvents", Native_SetClientEvents);
-	
-	MarkNativeAsOptional("GetClientEvents");
-	MarkNativeAsOptional("SetClientEvents");
 	g_bLateLoad = late;
 	
 	return APLRes_Success;
@@ -393,8 +390,8 @@ public any Native_GetClientEvents(Handle plugin, int numParams)
 		return false;
 		
 	eventpack_t ep;
-	ep.playerEvents = view_as<ArrayList>(CloneHandle(g_aPlayerEvents[client].Clone()));
-	ep.outputWaits = view_as<ArrayList>(CloneHandle(g_aOutputWait[client].Clone()));
+	ep.playerEvents = g_aPlayerEvents[client].Clone();
+	ep.outputWaits = g_aOutputWait[client].Clone();
 	
 	SetNativeArray(2, ep, sizeof(eventpack_t));
 	return true;
@@ -410,11 +407,10 @@ public any Native_SetClientEvents(Handle plugin, int numParams)
 	GetNativeArray(2, ep, sizeof(eventpack_t));
 	
 	delete g_aPlayerEvents[client];
+	delete g_aOutputWait[client];
 	
-	ArrayList playerEvents = view_as<ArrayList>(CloneHandle(ep.playerEvents));
-	
-	g_aPlayerEvents[client] = playerEvents.Clone();
-	delete playerEvents;
+	g_aPlayerEvents[client] = ep.playerEvents.Clone();
+	g_aOutputWait[client] = ep.outputWaits.Clone();
 	
 	return true;
 }

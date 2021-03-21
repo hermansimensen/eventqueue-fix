@@ -40,3 +40,10 @@ native any GetClientEvents(int client, any[] eventpack);
  */
 native any SetClientEvents(int client, any[] eventpack);
 
+#if !defined REQUIRE_PLUGIN
+public void __pl_eventqueuefix_SetNTVOptional()
+{
+	MarkNativeAsOptional("GetClientEvents");
+	MarkNativeAsOptional("SetClientEvents");
+}
+#endif
