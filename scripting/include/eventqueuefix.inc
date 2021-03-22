@@ -31,6 +31,12 @@ enum struct eventpack_t
 	ArrayList outputWaits;
 }
 
+enum struct entity_t
+{
+	int caller;
+	float waitTime;
+}
+
 /*
  * Gets the current pending events for a client.
  *
@@ -39,7 +45,7 @@ enum struct eventpack_t
  *
  * @return 							True if successful, false otherwise.
  */
-native any GetClientEvents(int client, any[] eventpack);
+native bool GetClientEvents(int client, any[] eventpack);
 
 /*
  * Sets the current pending events for a client.
@@ -49,12 +55,33 @@ native any GetClientEvents(int client, any[] eventpack);
  *
  * @return 							True if successful, false otherwise.
  */
-native any SetClientEvents(int client, any[] eventpack);
+native bool SetClientEvents(int client, any[] eventpack);
+
+/*
+ * Clears the current pending events for a client.
+ *
+ * @param client					Client index.
+ *
+ * @return 							True if successful, false otherwise.
+ */
+native bool ClearClientEvents(int client);
+
+/*
+ * Sets the current timescale for a client.
+ *
+ * @param client					Client index.
+ * @param timescale					Timescale.
+ *
+ * @return 							True if successful, false otherwise.
+ */
+native bool SetEventsTimescale(int client, float timescale);
 
 #if !defined REQUIRE_PLUGIN
 public void __pl_eventqueuefix_SetNTVOptional()
 {
 	MarkNativeAsOptional("GetClientEvents");
 	MarkNativeAsOptional("SetClientEvents");
+	MarkNativeAsOptional("ClearClientEvents");
+	MarkNativeAsOptional("SetEventsTimescale");
 }
 #endif

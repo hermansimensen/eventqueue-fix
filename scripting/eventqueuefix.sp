@@ -39,12 +39,7 @@ Handle g_hFindEntityByName;
 int g_iRefOffset;
 
 bool g_bBhopTimer;
-
-enum struct entity_t
-{
-	int caller;
-	float waitTime;
-}
+float g_fTimescale[MAXPLAYERS + 1];
 
 public Plugin myinfo =
 {
@@ -89,6 +84,8 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 {
 	CreateNative("GetClientEvents", Native_GetClientEvents);
 	CreateNative("SetClientEvents", Native_SetClientEvents);
+	CreateNative("ClearClientEvents", Native_ClearClientEvents);
+	CreateNative("SetEventsTimescale", Native_SetEventsTimescale);
 	g_bLateLoad = late;
 	
 	RegPluginLibrary("eventqueuefix");
@@ -112,6 +109,8 @@ public void OnMapStart()
 
 public void OnClientPutInServer(int client)
 {
+	g_fTimescale[client] = 1.0;
+	
 	if(g_aPlayerEvents[client] == null)
 	{
 		g_aPlayerEvents[client] = new ArrayList(sizeof(event_t));
@@ -299,6 +298,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	
 	if(g_bBhopTimer)
 		timescale = Shavit_GetClientTimescale(client) != -1.0 ? Shavit_GetClientTimescale(client) : Shavit_GetStyleSettingFloat(Shavit_GetBhopStyle(client), "speed");
+	else timescale = g_fTimescale[client];
 	
 	for(int i = 0; i < g_aOutputWait[client].Length; i++)
 	{
@@ -364,6 +364,31 @@ public any Native_SetClientEvents(Handle plugin, int numParams)
 	
 	g_aPlayerEvents[client] = ep.playerEvents.Clone();
 	g_aOutputWait[client] = ep.outputWaits.Clone();
+	
+	return true;
+}
+
+public any Native_SetEventsTimescale(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if(client < 0 || client > MaxClients || !IsClientConnected(client) || !IsClientInGame(client) || IsClientSourceTV(client))
+		return false;
+	
+	g_fTimescale[client] = GetNativeCell(2);
+	
+	return true;
+}
+
+public any Native_ClearClientEvents(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if(client < 0 || client > MaxClients || !IsClientConnected(client) || !IsClientInGame(client) || IsClientSourceTV(client))
+		return false;
+	
+	g_aOutputWait[client].Clear();
+	g_aPlayerEvents[client].Clear();
 	
 	return true;
 }
