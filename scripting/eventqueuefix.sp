@@ -172,7 +172,7 @@ void LoadDHooks()
 	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer, VDECODE_FLAG_ALLOWNULL | VDECODE_FLAG_ALLOWWORLD);
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_ByValue); 
 	g_hFindEntityByName = EndPrepSDKCall();
-
+	
 	Handle addEventThree = DHookCreateDetour(Address_Null, CallConv_THISCALL, ReturnType_Void, ThisPointer_Ignore);
 	DHookSetFromConf(addEventThree, gamedataConf, SDKConf_Signature, "AddEventThree");
 	DHookAddParam(addEventThree, HookParamType_CharPtr);
@@ -220,7 +220,7 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 	event.outputID = DHookGetParam(hParams, 7);
 	
 	#if defined DEBUG
-		PrintToChatAll("AddEventThree: %s, %s, %s, %f, %i, %i, %i", event.target, event.targetInput, event.variantValue, event.delay, event.activator, event.caller, event.outputID);
+		PrintToChatAll("AddEventThree: %s, %s, %s, %f, %i, %i, %i, time: %f", event.target, event.targetInput, event.variantValue, event.delay, event.activator, event.caller, event.outputID, GetGameTime());
 	#endif
 	
 	if((event.activator < 65 && event.activator > 0))
@@ -321,7 +321,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	{
 		event_t event;
 		g_aPlayerEvents[client].GetArray(i, event);
-		if(event.delay <= GetTickInterval() * timescale)
+		if(event.delay < GetTickInterval() * timescale)
 		{
 			ServiceEvent(event);
 			g_aPlayerEvents[client].Erase(i);
