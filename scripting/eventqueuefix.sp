@@ -214,7 +214,19 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 	DHookGetParamString(hParams, 1, event.target, 64);
 	DHookGetParamString(hParams, 2, event.targetInput, 64);
 	DHookGetParamObjectPtrString(hParams, 3, 0, ObjectValueType_String, event.variantValue, sizeof(event.variantValue));
-	event.delay = DHookGetParam(hParams, 4);
+	
+	int ticks;
+	if(GetTickInterval() == 0.01)
+	{
+		ticks = RoundToNearest(view_as<float>(DHookGetParam(hParams, 4)) / GetTickInterval());
+	}
+	else
+	{
+		ticks = RoundToCeil(view_as<float>(DHookGetParam(hParams, 4)) / GetTickInterval());
+	}
+	
+	event.delay = float(ticks);
+	
 	event.activator = EntRefToEntIndex(EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 5))));
 	event.caller = EntRefToEntIndex(EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 6))));
 	event.outputID = DHookGetParam(hParams, 7);
@@ -321,16 +333,16 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	{
 		event_t event;
 		g_aPlayerEvents[client].GetArray(i, event);
-		if(event.delay < GetTickInterval() * timescale)
+		
+		event.delay -= 1.0 * timescale;
+		
+		g_aPlayerEvents[client].SetArray(i, event);
+		
+		if(event.delay <= -1.0 * timescale)
 		{
 			ServiceEvent(event);
 			g_aPlayerEvents[client].Erase(i);
 			i--;
-		}
-		else
-		{
-			event.delay -= GetTickInterval() * timescale;
-			g_aPlayerEvents[client].SetArray(i, event);
 		}
 	}
 }
