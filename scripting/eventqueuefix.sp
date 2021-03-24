@@ -16,6 +16,7 @@
 
 #pragma semicolon 1
 
+#define FLT_EPSILON 1.192092896e-07
 // How many bits to use to encode an edict.
 #define    MAX_EDICT_BITS                11            // # of bits needed to represent max edicts
 // Max # of edicts in a level
@@ -214,19 +215,8 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 	DHookGetParamString(hParams, 1, event.target, 64);
 	DHookGetParamString(hParams, 2, event.targetInput, 64);
 	DHookGetParamObjectPtrString(hParams, 3, 0, ObjectValueType_String, event.variantValue, sizeof(event.variantValue));
-	
-	int ticks;
-	if(GetTickInterval() == 0.01)
-	{
-		ticks = RoundToNearest(view_as<float>(DHookGetParam(hParams, 4)) / GetTickInterval());
-	}
-	else
-	{
-		ticks = RoundToCeil(view_as<float>(DHookGetParam(hParams, 4)) / GetTickInterval());
-	}
-	
+	int ticks = RoundToCeil((view_as<float>(DHookGetParam(hParams, 4)) - FLT_EPSILON) / GetTickInterval());
 	event.delay = float(ticks);
-	
 	event.activator = EntRefToEntIndex(EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 5))));
 	event.caller = EntRefToEntIndex(EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 6))));
 	event.outputID = DHookGetParam(hParams, 7);
