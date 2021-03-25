@@ -270,6 +270,9 @@ public Action OnTrigger(const char[] output, int caller, int activator, float de
 
 int FindEntityByName(int startEntity, char[] targetname, int searchingEnt, int activator, int caller)
 {
+	if(!IsValidEntity(activator) || !IsValidEntity(caller) || !IsValidEntity(searchingEnt))
+		return -1; 
+		
 	Address targetEntityAddr = SDKCall(g_hFindEntityByName, startEntity, targetname, searchingEnt, activator, caller, 0);
 	
 	if(targetEntityAddr == Address_Null)
@@ -327,7 +330,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		event.delay -= 1.0 * timescale;
 		
 		g_aPlayerEvents[client].SetArray(i, event);
-		
 		if(event.delay <= -1.0 * timescale)
 		{
 			ServiceEvent(event);
