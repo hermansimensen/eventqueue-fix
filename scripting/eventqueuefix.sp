@@ -220,7 +220,7 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 	event.activator = EntRefToEntIndex(EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 5))));
 	event.caller = EntRefToEntIndex(EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 6))));
 	event.outputID = DHookGetParam(hParams, 7);
-	
+
 	#if defined DEBUG
 		PrintToChatAll("AddEventThree: %s, %s, %s, %f, %i, %i, %i, time: %f", event.target, event.targetInput, event.variantValue, event.delay, event.activator, event.caller, event.outputID, GetGameTime());
 	#endif
@@ -283,12 +283,12 @@ int FindEntityByName(int startEntity, char[] targetname, int searchingEnt, int a
 
 public void ServiceEvent(event_t event)
 {
-	SetVariantString(event.variantValue);
 	int targetEntity = -1;
 	
 	// In the context of the event, the searching entity is also the caller
 	while ((targetEntity = FindEntityByName(targetEntity, event.target, event.caller, event.activator, event.caller)) != -1)
 	{
+		SetVariantString(event.variantValue);
 		AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
 		
 		#if defined DEBUG
@@ -310,7 +310,8 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		entity_t ent;
 		g_aOutputWait[client].GetArray(i, ent);
 		
-		if(ent.waitTime <= GetTickInterval() * timescale)
+		
+		if(ent.waitTime <= GetTickInterval()*1.5 * timescale)
 		{
 			g_aOutputWait[client].Erase(i);
 			i--;
