@@ -87,7 +87,13 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("SetClientEvents", Native_SetClientEvents);
 	CreateNative("ClearClientEvents", Native_ClearClientEvents);
 	CreateNative("SetEventsTimescale", Native_SetEventsTimescale);
+	
+	MarkNativeAsOptional("Shavit_GetBhopStyle");
+	MarkNativeAsOptional("Shavit_GetStyleSettingFloat");
+	MarkNativeAsOptional("Shavit_GetClientTimescale");
+	
 	g_bLateLoad = late;
+	
 	
 	RegPluginLibrary("eventqueuefix");
 	
