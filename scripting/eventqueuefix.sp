@@ -256,7 +256,8 @@ public Action OnTrigger(const char[] output, int caller, int activator, float de
 		if(!bFound)
 		{
 			ent.caller = caller;
-			ent.waitTime = m_flWait;
+			int ticks = RoundToCeil((m_flWait - FLT_EPSILON) / GetTickInterval());
+			ent.waitTime = float(ticks);
 			g_aOutputWait[activator].PushArray(ent);	
 			return Plugin_Continue;
 		}
@@ -310,16 +311,13 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		entity_t ent;
 		g_aOutputWait[client].GetArray(i, ent);
 		
+		ent.waitTime -= 1.0 * timescale;
+		g_aOutputWait[client].SetArray(i, ent);
 		
-		if(ent.waitTime <= GetTickInterval()*1.5 * timescale)
+		if(ent.waitTime <= 1.0 * timescale)
 		{
 			g_aOutputWait[client].Erase(i);
 			i--;
-		}
-		else
-		{
-			ent.waitTime -= GetTickInterval() * timescale;
-			g_aOutputWait[client].SetArray(i, ent);
 		}
 	}
 	
