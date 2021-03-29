@@ -151,6 +151,14 @@ public void OnClientDisconnect(int client)
 	}
 }
 
+public void OnEntityCreated(int entity, const char[] classname)
+{
+	if (StrEqual(classname, "func_button"))
+	{
+		SDKHook(entity, SDKHook_OnTakeDamage, Hook_Button_OnTakeDamage);
+	}
+}
+
 void LoadDHooks()
 {
 	GameData gamedataConf = LoadGameConfigFile("eventfix.games");
@@ -342,6 +350,15 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			i--;
 		}
 	}
+}
+
+public Action Hook_Button_OnTakeDamage(int victim, int& attacker, int& inflictor, float& damage, int& damagetype, int& weapon, float damageForce[3], float damagePosition[3], int damagecustom)
+{
+	// func_button fires the OnDamage output before setting m_hActivator to the attacker.
+	// This means m_hActivator can be unset or a previous attacker.
+	// This is a problem at bhop_badges level 13 and also the booster in the ladder room.
+	SetEntPropEnt(victim, Prop_Data, "m_hActivator", attacker);
+	return Plugin_Continue;
 }
 
 public any Native_GetClientEvents(Handle plugin, int numParams)
