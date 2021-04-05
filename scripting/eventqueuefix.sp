@@ -366,10 +366,16 @@ public any Native_GetClientEvents(Handle plugin, int numParams)
 	int client = GetNativeCell(1);
 	if(client < 0 || client > MaxClients || !IsClientConnected(client) || !IsClientInGame(client) || IsClientSourceTV(client))
 		return false;
-		
+
+	ArrayList pe = g_aPlayerEvents[client].Clone();
+	ArrayList ow = g_aOutputWait[client].Clone();
+
 	eventpack_t ep;
-	ep.playerEvents = g_aPlayerEvents[client].Clone();
-	ep.outputWaits = g_aOutputWait[client].Clone();
+	ep.playerEvents = view_as<ArrayList>(CloneHandle(pe, plugin));
+	ep.outputWaits = view_as<ArrayList>(CloneHandle(ow, plugin));
+
+	delete pe;
+	delete ow;
 	
 	SetNativeArray(2, ep, sizeof(eventpack_t));
 	return true;
