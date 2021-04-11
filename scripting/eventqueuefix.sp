@@ -60,22 +60,12 @@ public void OnPluginStart()
 
 public void OnAllPluginsLoaded()
 {
-	if(GetFeatureStatus(FeatureType_Native, "Shavit_GetBhopStyle") != FeatureStatus_Unknown)
+
+	if(LibraryExists("shavit") && GetFeatureStatus(FeatureType_Native, "Shavit_GetStyleSettingFloat") != FeatureStatus_Unknown)
 	{
 		g_bBhopTimer = true;
 	}
-	
-	if(GetFeatureStatus(FeatureType_Native, "Shavit_GetClientTimescale") != FeatureStatus_Unknown)
-	{
-		g_bBhopTimer = true;
-	}
-	
-	//This is the latest added native, so we check this one last.
-	if(GetFeatureStatus(FeatureType_Native, "Shavit_GetStyleSettingFloat") != FeatureStatus_Unknown)
-	{
-		g_bBhopTimer = true;
-	}
-	
+
 	if(g_bBhopTimer)
 	{
 		PrintToServer("[EventQueueFix] Found compatible timer: Bhoptimer.");
@@ -315,12 +305,11 @@ public void ServiceEvent(event_t event)
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
 {
-	float timescale = 1.0;
+	float timescale = g_fTimescale[client];
 	
 	if(g_bBhopTimer)
 		timescale = Shavit_GetClientTimescale(client) != -1.0 ? Shavit_GetClientTimescale(client) : Shavit_GetStyleSettingFloat(Shavit_GetBhopStyle(client), "speed");
-	else timescale = g_fTimescale[client];
-	
+
 	for(int i = 0; i < g_aOutputWait[client].Length; i++)
 	{
 		entity_t ent;
