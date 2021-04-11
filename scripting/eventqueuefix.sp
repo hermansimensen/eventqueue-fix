@@ -69,7 +69,7 @@ public void OnAllPluginsLoaded()
 		}
 		else
 		{
-			PrintToServer("[EventQueueFix] Found compatible timer: Bhoptimer, but it is not version 2.6.0 or above.");
+			PrintToServer("[EventQueueFix] Found compatible timer: Bhoptimer, but it is not version 2.7.0 or above.");
 		}
 	}
 
