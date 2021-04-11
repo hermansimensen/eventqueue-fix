@@ -61,15 +61,22 @@ public void OnPluginStart()
 public void OnAllPluginsLoaded()
 {
 
-	if(LibraryExists("shavit") && GetFeatureStatus(FeatureType_Native, "Shavit_GetStyleSettingFloat") != FeatureStatus_Unknown)
+	if(LibraryExists("shavit"))
 	{
-		g_bBhopTimer = true;
+		if(GetFeatureStatus(FeatureType_Native, "Shavit_GetStyleSettingFloat") != FeatureStatus_Unknown)
+		{
+			g_bBhopTimer = true;
+		}
+		else
+		{
+			PrintToServer("[EventQueueFix] Found compatible timer: Bhoptimer, but it is not version 2.6.0 or above.");
+		}
 	}
 
 	if(g_bBhopTimer)
 	{
 		PrintToServer("[EventQueueFix] Found compatible timer: Bhoptimer.");
-	} 
+	}
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
