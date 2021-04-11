@@ -53,6 +53,7 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
+	g_bBhopTimer = false;
 	LoadDHooks();
 	HookEntityOutput("trigger_multiple", "OnTrigger", OnTrigger);
 }
@@ -62,18 +63,18 @@ public void OnAllPluginsLoaded()
 	if(GetFeatureStatus(FeatureType_Native, "Shavit_GetBhopStyle") != FeatureStatus_Unknown)
 	{
 		g_bBhopTimer = true;
-	} else g_bBhopTimer = false;
+	}
 	
 	if(GetFeatureStatus(FeatureType_Native, "Shavit_GetClientTimescale") != FeatureStatus_Unknown)
 	{
 		g_bBhopTimer = true;
-	} else g_bBhopTimer = false;
+	}
 	
 	//This is the latest added native, so we check this one last.
 	if(GetFeatureStatus(FeatureType_Native, "Shavit_GetStyleSettingFloat") != FeatureStatus_Unknown)
 	{
 		g_bBhopTimer = true;
-	} else g_bBhopTimer = false;
+	}
 	
 	if(g_bBhopTimer)
 	{
