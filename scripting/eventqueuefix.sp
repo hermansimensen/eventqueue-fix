@@ -135,18 +135,10 @@ public void OnClientPutInServer(int client)
 	}
 }
 
-public void OnClientDisconnect(int client)
+public void OnClientDisconnect_Post(int client)
 {
-	if(g_aPlayerEvents[client] != null)
-	{
-		g_aPlayerEvents[client].Clear();
-	}
-	
-	if(g_aOutputWait[client] != null)
-	{
-		g_aOutputWait[client].Clear();
-		delete g_aOutputWait[client];
-	}
+	delete g_aPlayerEvents[client];
+	delete g_aOutputWait[client];
 }
 
 public void OnEntityCreated(int entity, const char[] classname)
@@ -224,26 +216,27 @@ int EntityToBCompatRef(Address player)
 public MRESReturn DHook_AddEventThree(Handle hParams)
 {
 	event_t event;
+	event.activator = EntRefToEntIndex(EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 5))));
+
+	if (event.activator < 1 || event.activator > MaxClients)
+	{
+		return MRES_Ignored;
+	}
+
 	DHookGetParamString(hParams, 1, event.target, 64);
 	DHookGetParamString(hParams, 2, event.targetInput, 64);
 	DHookGetParamObjectPtrString(hParams, 3, 0, ObjectValueType_String, event.variantValue, sizeof(event.variantValue));
 	int ticks = RoundToCeil((view_as<float>(DHookGetParam(hParams, 4)) - FLT_EPSILON) / GetTickInterval());
 	event.delay = float(ticks);
-	event.activator = EntRefToEntIndex(EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 5))));
 	event.caller = EntRefToEntIndex(EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 6))));
 	event.outputID = DHookGetParam(hParams, 7);
 
 	#if defined DEBUG
 		PrintToChatAll("AddEventThree: %s, %s, %s, %f, %i, %i, %i, time: %f", event.target, event.targetInput, event.variantValue, event.delay, event.activator, event.caller, event.outputID, GetGameTime());
 	#endif
-	
-	if((event.activator < 65 && event.activator > 0))
-	{
-		g_aPlayerEvents[event.activator].PushArray(event);
-		return MRES_Supercede;
-	}
 
-	return MRES_Ignored;
+	g_aPlayerEvents[event.activator].PushArray(event);
+	return MRES_Supercede;
 }
 
 public Action OnTrigger(const char[] output, int caller, int activator, float delay)
