@@ -33,8 +33,9 @@ native int Shavit_GetBhopStyle(int client);
 native float Shavit_GetStyleSettingFloat(int style, const char[] key);
 native float Shavit_GetClientTimescale(int client);
 
-ArrayList g_aPlayerEvents[MAXPLAYERS+1];
-ArrayList g_aOutputWait[MAXPLAYERS+1];
+ArrayList g_aPlayerEvents[MAXPLAYERS + 1];
+ArrayList g_aOutputWait[MAXPLAYERS + 1];
+bool g_bPaused[MAXPLAYERS + 1];
 bool g_bLateLoad;
 Handle g_hFindEntityByName;
 int g_iRefOffset;
@@ -85,6 +86,8 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("SetClientEvents", Native_SetClientEvents);
 	CreateNative("ClearClientEvents", Native_ClearClientEvents);
 	CreateNative("SetEventsTimescale", Native_SetEventsTimescale);
+	CreateNative("IsClientEventsPaused", Native_IsClientPaused);
+	CreateNative("SetClientEventsPaused", Native_SetClientPaused);
 	
 	MarkNativeAsOptional("Shavit_GetBhopStyle");
 	MarkNativeAsOptional("Shavit_GetStyleSettingFloat");
@@ -115,6 +118,7 @@ public void OnMapStart()
 public void OnClientPutInServer(int client)
 {
 	g_fTimescale[client] = 1.0;
+	g_bPaused[client] = false;
 	
 	if(g_aPlayerEvents[client] == null)
 	{
@@ -305,6 +309,9 @@ public void ServiceEvent(event_t event)
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
 {
+	if(g_bPaused[client])
+		return Plugin_Continue;
+	
 	float timescale = g_fTimescale[client];
 	
 	if(g_bBhopTimer)
@@ -340,6 +347,8 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			i--;
 		}
 	}
+	
+	return Plugin_Continue;
 }
 
 public Action Hook_Button_OnTakeDamage(int victim, int& attacker, int& inflictor, float& damage, int& damagetype, int& weapon, float damageForce[3], float damagePosition[3], int damagecustom)
@@ -413,4 +422,27 @@ public any Native_ClearClientEvents(Handle plugin, int numParams)
 	g_aPlayerEvents[client].Clear();
 	
 	return true;
+}
+
+public any Native_SetClientPaused(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	bool pauseState = GetNativeCell(2);
+	
+	if(client < 0 || client > MaxClients || !IsClientConnected(client) || !IsClientInGame(client) || IsClientSourceTV(client))
+		return false;
+		
+	g_bPaused[client] = pauseState;
+	
+	return true;
+}
+
+public any Native_IsClientPaused(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if(client < 0 || client > MaxClients || !IsClientConnected(client) || !IsClientInGame(client) || IsClientSourceTV(client))
+		return ThrowNativeError(032, "Client is invalid.");
+		
+	return g_bPaused[client];
 }
