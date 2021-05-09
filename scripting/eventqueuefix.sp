@@ -293,7 +293,7 @@ public void ServiceEvent(event_t event)
 	int targetEntity = -1;
 	
 	if(!IsValidEntity(event.caller))
-		event.caller = 0;
+		event.caller = -1;
 	
 	// In the context of the event, the searching entity is also the caller
 	while ((targetEntity = FindEntityByName(targetEntity, event.target, event.caller, event.activator, event.caller)) != -1)
