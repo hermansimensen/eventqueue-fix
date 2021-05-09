@@ -1,6 +1,5 @@
 
 //#define DEBUG
-//#define CSGO_WIN
 
 #define PLUGIN_NAME           "EventQueue fix"
 #define PLUGIN_AUTHOR         "carnifex"
@@ -166,11 +165,10 @@ void LoadDHooks()
 	int ibuff = gamedataConf.GetOffset("m_angRotation");
 	g_iRefOffset = ibuff + m_RefEHandleOff;
 	
-	#if defined CSGO_WIN
+	if (gamedataConf.GetOffset("FindEntityByName_StaticCall") == 1)
 		StartPrepSDKCall(SDKCall_Static);
-	#else
+	else
 		StartPrepSDKCall(SDKCall_EntityList);
-	#endif
 	
 	PrepSDKCall_SetFromConf(gamedataConf, SDKConf_Signature, "FindEntityByName");
 	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_ByValue);

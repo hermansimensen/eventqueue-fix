@@ -44,6 +44,10 @@
 				"windows"	"12"
 				"linux"		"12"
 			}
+			"FindEntityByName_StaticCall"
+			{
+				"windows" "1"
+			}
 		}
 	}
 	"cstrike"
