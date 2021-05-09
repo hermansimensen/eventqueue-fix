@@ -280,9 +280,6 @@ public Action OnTrigger(const char[] output, int caller, int activator, float de
 
 int FindEntityByName(int startEntity, char[] targetname, int searchingEnt, int activator, int caller)
 {
-	if(!IsValidEntity(activator) || !IsValidEntity(caller) || !IsValidEntity(searchingEnt))
-		return -1; 
-		
 	Address targetEntityAddr = SDKCall(g_hFindEntityByName, startEntity, targetname, searchingEnt, activator, caller, 0);
 	
 	if(targetEntityAddr == Address_Null)
@@ -294,6 +291,9 @@ int FindEntityByName(int startEntity, char[] targetname, int searchingEnt, int a
 public void ServiceEvent(event_t event)
 {
 	int targetEntity = -1;
+	
+	if(!IsValidEntity(event.caller))
+		event.caller = 0;
 	
 	// In the context of the event, the searching entity is also the caller
 	while ((targetEntity = FindEntityByName(targetEntity, event.target, event.caller, event.activator, event.caller)) != -1)
