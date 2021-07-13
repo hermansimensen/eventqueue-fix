@@ -1,5 +1,5 @@
 
-//#define DEBUG
+#define DEBUG
 
 #define PLUGIN_NAME           "EventQueue fix"
 #define PLUGIN_AUTHOR         "carnifex"
@@ -218,7 +218,7 @@ int EntityToBCompatRef(Address player)
 public MRESReturn DHook_AddEventThree(Handle hParams)
 {
 	event_t event;
-	event.activator = EntRefToEntIndex(EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 5))));
+	event.activator = EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 5)));
 
 	if (event.activator < 1 || event.activator > MaxClients)
 	{
@@ -230,7 +230,7 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 	DHookGetParamObjectPtrString(hParams, 3, 0, ObjectValueType_String, event.variantValue, sizeof(event.variantValue));
 	int ticks = RoundToCeil((view_as<float>(DHookGetParam(hParams, 4)) - FLT_EPSILON) / GetTickInterval());
 	event.delay = float(ticks);
-	event.caller = EntRefToEntIndex(EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 6))));
+	event.caller = EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 6)));
 	event.outputID = DHookGetParam(hParams, 7);
 
 	#if defined DEBUG
@@ -297,7 +297,7 @@ public void ServiceEvent(event_t event)
 	while ((targetEntity = FindEntityByName(targetEntity, event.target, event.caller, event.activator, event.caller)) != -1)
 	{
 		SetVariantString(event.variantValue);
-		AcceptEntityInput(targetEntity, event.targetInput, event.activator, event.caller, event.outputID);
+		AcceptEntityInput(targetEntity, event.targetInput, EntRefToEntIndex(event.activator), EntRefToEntIndex(event.caller), event.outputID);
 		
 		#if defined DEBUG
 			PrintToChat(event.activator, "Performing output: %s, %i, %i, %s %s, %i, %f", event.target, targetEntity, event.caller, event.targetInput, event.variantValue, event.outputID, GetGameTime());
