@@ -218,13 +218,15 @@ int EntityToBCompatRef(Address player)
 public MRESReturn DHook_AddEventThree(Handle hParams)
 {
 	event_t event;
-	event.activator = EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 5)));
+	int entIndex = EntRefToEntIndex(EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 5))));
 
-	if (event.activator < 1 || event.activator > MaxClients)
+	if (entIndex < 1 || entIndex > MaxClients)
 	{
 		return MRES_Ignored;
 	}
-
+	
+	event.activator = GetClientSerial(entIndex);
+	
 	DHookGetParamString(hParams, 1, event.target, 64);
 	DHookGetParamString(hParams, 2, event.targetInput, 64);
 	DHookGetParamObjectPtrString(hParams, 3, 0, ObjectValueType_String, event.variantValue, sizeof(event.variantValue));
@@ -234,10 +236,10 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 	event.outputID = DHookGetParam(hParams, 7);
 
 	#if defined DEBUG
-		PrintToChatAll("AddEventThree: %s, %s, %s, %f, %i, %i, %i, time: %f", event.target, event.targetInput, event.variantValue, event.delay, event.activator, event.caller, event.outputID, GetGameTime());
+		PrintToChatAll("AddEventThree: %s, %s, %s, %f, %i, %i, %i, time: %f", event.target, event.targetInput, event.variantValue, event.delay, entIndex, EntRefToEntIndex(event.caller), event.outputID, GetGameTime());
 	#endif
 
-	g_aPlayerEvents[event.activator].PushArray(event);
+	g_aPlayerEvents[entIndex].PushArray(event);
 	return MRES_Supercede;
 }
 
@@ -253,7 +255,7 @@ public Action OnTrigger(const char[] output, int caller, int activator, float de
 		{
 			g_aOutputWait[activator].GetArray(i, ent);
 			
-			if(caller == ent.caller)
+			if(caller == EntRefToEntIndex(ent.caller))
 			{
 				bFound = true;
 				break;
@@ -262,7 +264,7 @@ public Action OnTrigger(const char[] output, int caller, int activator, float de
 		
 		if(!bFound)
 		{
-			ent.caller = caller;
+			ent.caller = EntIndexToEntRef(caller);
 			int ticks = RoundToCeil((m_flWait - FLT_EPSILON) / GetTickInterval());
 			ent.waitTime = float(ticks);
 			g_aOutputWait[activator].PushArray(ent);	
@@ -290,17 +292,21 @@ public void ServiceEvent(event_t event)
 {
 	int targetEntity = -1;
 	
-	if(!IsValidEntity(event.caller))
-		event.caller = -1;
+	int caller = EntRefToEntIndex(event.caller);
+	int activator = GetClientFromSerial(event.activator);
+	
+	if(!IsValidEntity(caller))
+		caller = -1;
+	
 	
 	// In the context of the event, the searching entity is also the caller
-	while ((targetEntity = FindEntityByName(targetEntity, event.target, event.caller, event.activator, event.caller)) != -1)
+	while ((targetEntity = FindEntityByName(targetEntity, event.target, caller, activator, caller)) != -1)
 	{
 		SetVariantString(event.variantValue);
-		AcceptEntityInput(targetEntity, event.targetInput, EntRefToEntIndex(event.activator), EntRefToEntIndex(event.caller), event.outputID);
+		AcceptEntityInput(targetEntity, event.targetInput, activator, caller, event.outputID);
 		
 		#if defined DEBUG
-			PrintToChat(event.activator, "Performing output: %s, %i, %i, %s %s, %i, %f", event.target, targetEntity, event.caller, event.targetInput, event.variantValue, event.outputID, GetGameTime());
+			PrintToChat(activator, "Performing output: %s, %i, %i, %s %s, %i, %f", event.target, targetEntity, caller, event.targetInput, event.variantValue, event.outputID, GetGameTime());
 		#endif
 	} 
 }
