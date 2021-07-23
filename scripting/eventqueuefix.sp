@@ -1,10 +1,10 @@
 
-#define DEBUG
+//#define DEBUG
 
 #define PLUGIN_NAME           "EventQueue fix"
 #define PLUGIN_AUTHOR         "carnifex"
 #define PLUGIN_DESCRIPTION    ""
-#define PLUGIN_VERSION        "1.0"
+#define PLUGIN_VERSION        "1.1.0"
 #define PLUGIN_URL            ""
 
 #include <sourcemod>
