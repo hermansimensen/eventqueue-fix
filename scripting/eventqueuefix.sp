@@ -4,7 +4,7 @@
 #define PLUGIN_NAME           "EventQueue fix"
 #define PLUGIN_AUTHOR         "carnifex"
 #define PLUGIN_DESCRIPTION    ""
-#define PLUGIN_VERSION        "1.1.0"
+#define PLUGIN_VERSION        "1.1.1"
 #define PLUGIN_URL            ""
 
 #include <sourcemod>
@@ -218,14 +218,13 @@ int EntityToBCompatRef(Address player)
 public MRESReturn DHook_AddEventThree(Handle hParams)
 {
 	event_t event;
-	int entIndex = EntRefToEntIndex(EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 5))));
+	event.activator = EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 5)));
+	int entIndex = EntRefToEntIndex(event.activator);
 
 	if (entIndex < 1 || entIndex > MaxClients)
 	{
 		return MRES_Ignored;
 	}
-	
-	event.activator = GetClientSerial(entIndex);
 	
 	DHookGetParamString(hParams, 1, event.target, 64);
 	DHookGetParamString(hParams, 2, event.targetInput, 64);
@@ -293,11 +292,10 @@ public void ServiceEvent(event_t event)
 	int targetEntity = -1;
 	
 	int caller = EntRefToEntIndex(event.caller);
-	int activator = GetClientFromSerial(event.activator);
+	int activator = EntRefToEntIndex(event.activator);
 	
 	if(!IsValidEntity(caller))
 		caller = -1;
-	
 	
 	// In the context of the event, the searching entity is also the caller
 	while ((targetEntity = FindEntityByName(targetEntity, event.target, caller, activator, caller)) != -1)
@@ -399,6 +397,16 @@ public any Native_SetClientEvents(Handle plugin, int numParams)
 	
 	g_aPlayerEvents[client] = ep.playerEvents.Clone();
 	g_aOutputWait[client] = ep.outputWaits.Clone();
+	
+ 	int length = g_aPlayerEvents[client].Length;
+
+	for (int i = 0; i < length; i++)
+    {
+        event_t event;
+        g_aPlayerEvents[client].GetArray(i, event);
+        event.activator = EntIndexToEntRef(client);
+        g_aPlayerEvents[client].SetArray(i, event);
+    }
 	
 	return true;
 }
