@@ -228,7 +228,8 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 	
 	DHookGetParamString(hParams, 1, event.target, 64);
 	DHookGetParamString(hParams, 2, event.targetInput, 64);
-	DHookGetParamObjectPtrString(hParams, 3, 0, ObjectValueType_String, event.variantValue, sizeof(event.variantValue));
+	ResolveVariantValue(hParams, event);
+	
 	int ticks = RoundToCeil((view_as<float>(DHookGetParam(hParams, 4)) - FLT_EPSILON) / GetTickInterval());
 	event.delay = float(ticks);
 	event.caller = EntityToBCompatRef(view_as<Address>(DHookGetParam(hParams, 6)));
@@ -240,6 +241,31 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 
 	g_aPlayerEvents[entIndex].PushArray(event);
 	return MRES_Supercede;
+}
+
+public void ResolveVariantValue(Handle &params, event_t event)
+{
+	int type = DHookGetParamObjectPtrVar(params, 3, 16, ObjectValueType_Int);
+	
+	switch(type)
+	{
+		case 1:
+		{
+			float fVar = DHookGetParamObjectPtrVar(params, 3, 0, ObjectValueType_Float);
+			FloatToString(fVar, event.variantValue, sizeof(event.variantValue));
+		}
+		
+		case 5:
+		{
+			int iVar = DHookGetParamObjectPtrVar(params, 3, 0, ObjectValueType_Int);
+			IntToString(iVar, event.variantValue, sizeof(event.variantValue));
+		}
+		
+		default:
+		{
+			DHookGetParamObjectPtrString(params, 3, 0, ObjectValueType_String, event.variantValue, sizeof(event.variantValue));
+		}
+	}
 }
 
 public Action OnTrigger(const char[] output, int caller, int activator, float delay)
