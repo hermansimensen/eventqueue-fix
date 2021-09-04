@@ -249,12 +249,22 @@ public void ResolveVariantValue(Handle &params, event_t event)
 	
 	switch(type)
 	{
+		//Float
 		case 1:
 		{
 			float fVar = DHookGetParamObjectPtrVar(params, 3, 0, ObjectValueType_Float);
-			FloatToString(fVar, event.variantValue, sizeof(event.variantValue));
+			
+			//Type recognition is difficult, even for valve programmers. Sometimes floats are integers, lets fix that.
+			if(FloatAbs(fVar - RoundFloat(fVar)) < 0.000001)
+			{
+				IntToString(RoundFloat(fVar), event.variantValue, sizeof(event.variantValue));
+			} else
+			{
+				FloatToString(fVar, event.variantValue, sizeof(event.variantValue));
+			}
 		}
 		
+		//Integer
 		case 5:
 		{
 			int iVar = DHookGetParamObjectPtrVar(params, 3, 0, ObjectValueType_Int);
