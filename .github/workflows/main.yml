@@ -25,7 +25,7 @@ jobs:
       - name: Set environment variables
         run: |
           echo "SCRIPTS_PATH=scripting" >> $GITHUB_ENV
-          mkdir package
+          mkdir plugins
         
       - name: Setup SourcePawn Compiler
         uses: rumblefrog/setup-sp@v1.0.1
@@ -35,11 +35,11 @@ jobs:
         
       - name: Compile EventQueueFix
         run: 
-            spcomp -E -w234 -O2 -v2 -i include -o ../package/eventqueuefix.smx eventqueuefix.sp
+            spcomp -E -w234 -O2 -v2 -i include -o ../plugins/eventqueuefix.smx eventqueuefix.sp
         working-directory: ${{ env.SCRIPTS_PATH }}
         
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
           name: eventqueuefix-dev
-          path: package
+          path: /
