@@ -30,7 +30,7 @@ jobs:
         uses: rumblefrog/setup-sp@v1.0.1
         with:
           # Version of SP compiler
-          version: 1.10
+          version: 1.10.x
         
       - name: Compile EventQueueFix
         run: 
