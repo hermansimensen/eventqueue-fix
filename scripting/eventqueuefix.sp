@@ -4,7 +4,7 @@
 #define PLUGIN_NAME           "EventQueue fix"
 #define PLUGIN_AUTHOR         "carnifex"
 #define PLUGIN_DESCRIPTION    ""
-#define PLUGIN_VERSION        "1.2.0"
+#define PLUGIN_VERSION        "1.2.1"
 #define PLUGIN_URL            ""
 
 #include <sourcemod>
@@ -353,7 +353,16 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	float timescale = g_fTimescale[client];
 	
 	if(g_bBhopTimer)
-		timescale = Shavit_GetClientTimescale(client) != -1.0 ? Shavit_GetClientTimescale(client) : Shavit_GetStyleSettingFloat(Shavit_GetBhopStyle(client), "speed");
+	{
+		timescale = Shavit_GetClientTimescale(client);
+
+		if (timescale == -1.0)
+		{
+			timescale = Shavit_GetStyleSettingFloat(Shavit_GetBhopStyle(client), "timescale");
+		}
+
+		timescale *= Shavit_GetStyleSettingFloat(Shavit_GetBhopStyle(client), "speed");
+	}
 
 	for(int i = 0; i < g_aOutputWait[client].Length; i++)
 	{
