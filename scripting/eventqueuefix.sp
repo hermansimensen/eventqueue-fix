@@ -4,7 +4,7 @@
 #define PLUGIN_NAME           "EventQueue fix"
 #define PLUGIN_AUTHOR         "carnifex"
 #define PLUGIN_DESCRIPTION    ""
-#define PLUGIN_VERSION        "1.2.0"
+#define PLUGIN_VERSION        "1.2.1"
 #define PLUGIN_URL            ""
 
 #include <sourcemod>
@@ -27,11 +27,6 @@
 #define ENT_ENTRY_MASK            (NUM_ENT_ENTRIES - 1)
 #define INVALID_EHANDLE_INDEX    0xFFFFFFFF
 
-//bhoptimer natives.
-native int Shavit_GetBhopStyle(int client);
-native float Shavit_GetStyleSettingFloat(int style, const char[] key);
-native float Shavit_GetClientTimescale(int client);
-
 ArrayList g_aPlayerEvents[MAXPLAYERS + 1];
 ArrayList g_aOutputWait[MAXPLAYERS + 1];
 bool g_bPaused[MAXPLAYERS + 1];
@@ -39,7 +34,6 @@ bool g_bLateLoad;
 Handle g_hFindEntityByName;
 int g_iRefOffset;
 
-bool g_bBhopTimer;
 float g_fTimescale[MAXPLAYERS + 1];
 
 public Plugin myinfo =
@@ -53,30 +47,8 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
-	g_bBhopTimer = false;
 	LoadDHooks();
 	HookEntityOutput("trigger_multiple", "OnTrigger", OnTrigger);
-}
-
-public void OnAllPluginsLoaded()
-{
-
-	if(LibraryExists("shavit"))
-	{
-		if(GetFeatureStatus(FeatureType_Native, "Shavit_GetStyleSettingFloat") != FeatureStatus_Unknown)
-		{
-			g_bBhopTimer = true;
-		}
-		else
-		{
-			PrintToServer("[EventQueueFix] Found compatible timer: Bhoptimer, but it is not version 2.7.0 or above.");
-		}
-	}
-
-	if(g_bBhopTimer)
-	{
-		PrintToServer("[EventQueueFix] Found compatible timer: Bhoptimer.");
-	}
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -87,10 +59,6 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("SetEventsTimescale", Native_SetEventsTimescale);
 	CreateNative("IsClientEventsPaused", Native_IsClientPaused);
 	CreateNative("SetClientEventsPaused", Native_SetClientPaused);
-	
-	MarkNativeAsOptional("Shavit_GetBhopStyle");
-	MarkNativeAsOptional("Shavit_GetStyleSettingFloat");
-	MarkNativeAsOptional("Shavit_GetClientTimescale");
 	
 	g_bLateLoad = late;
 	
@@ -351,9 +319,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		return Plugin_Continue;
 	
 	float timescale = g_fTimescale[client];
-	
-	if(g_bBhopTimer)
-		timescale = Shavit_GetClientTimescale(client) != -1.0 ? Shavit_GetClientTimescale(client) : Shavit_GetStyleSettingFloat(Shavit_GetBhopStyle(client), "speed");
 
 	for(int i = 0; i < g_aOutputWait[client].Length; i++)
 	{
