@@ -48,7 +48,6 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	LoadDHooks();
-	HookEntityOutput("trigger_multiple", "OnTrigger", OnTrigger);
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -61,7 +60,6 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("SetClientEventsPaused", Native_SetClientPaused);
 	
 	g_bLateLoad = late;
-	
 	
 	RegPluginLibrary("eventqueuefix");
 	
@@ -122,7 +120,7 @@ public void OnEntityCreated(int entity, const char[] classname)
 
 void LoadDHooks()
 {
-	GameData gamedataConf = LoadGameConfigFile("eventfix.games");
+	GameData gamedataConf = new GameData("eventfix.games");
 
 	if(gamedataConf == null)
 	{
@@ -138,7 +136,8 @@ void LoadDHooks()
 	else
 		StartPrepSDKCall(SDKCall_EntityList);
 	
-	PrepSDKCall_SetFromConf(gamedataConf, SDKConf_Signature, "FindEntityByName");
+	if(!PrepSDKCall_SetFromConf(gamedataConf, SDKConf_Signature, "FindEntityByName"))
+		SetFailState("Faild to find FindEntityByName signature.");
 	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_ByValue);
 	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer, VDECODE_FLAG_ALLOWNULL | VDECODE_FLAG_ALLOWWORLD);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
@@ -149,7 +148,8 @@ void LoadDHooks()
 	g_hFindEntityByName = EndPrepSDKCall();
 	
 	Handle addEventThree = DHookCreateDetour(Address_Null, CallConv_THISCALL, ReturnType_Void, ThisPointer_Ignore);
-	DHookSetFromConf(addEventThree, gamedataConf, SDKConf_Signature, "AddEventThree");
+	if(!DHookSetFromConf(addEventThree, gamedataConf, SDKConf_Signature, "AddEventThree"))
+		SetFailState("Faild to find AddEventThree signature.");
 	DHookAddParam(addEventThree, HookParamType_CharPtr);
 	DHookAddParam(addEventThree, HookParamType_CharPtr);
 	DHookAddParam(addEventThree, HookParamType_Object, 20, DHookPass_ByVal|DHookPass_ODTOR|DHookPass_OCTOR|DHookPass_OASSIGNOP);
@@ -159,7 +159,14 @@ void LoadDHooks()
 	DHookAddParam(addEventThree, HookParamType_Int);
 	if(!DHookEnableDetour(addEventThree, false, DHook_AddEventThree))
 		SetFailState("Couldn't enable AddEventThree detour.");
-
+	
+	Handle activateMultiTrigger = DHookCreateDetour(Address_Null, CallConv_THISCALL, ReturnType_Void, ThisPointer_CBaseEntity);
+	if(!DHookSetFromConf(activateMultiTrigger, gamedataConf, SDKConf_Signature, "ActivateMultiTrigger"))
+		SetFailState("Faild to find ActivateMultiTrigger signature.");
+	DHookAddParam(activateMultiTrigger, HookParamType_CBaseEntity);
+	if(!DHookEnableDetour(activateMultiTrigger, false, DHook_ActivateMultiTrigger))
+		SetFailState("Couldn't enable ActivateMultiTrigger detour.");
+	
 	delete gamedataConf;
 }
 
@@ -204,7 +211,7 @@ public MRESReturn DHook_AddEventThree(Handle hParams)
 	event.outputID = DHookGetParam(hParams, 7);
 
 	#if defined DEBUG
-		PrintToChatAll("AddEventThree: %s, %s, %s, %f, %i, %i, %i, time: %f", event.target, event.targetInput, event.variantValue, event.delay, entIndex, EntRefToEntIndex(event.caller), event.outputID, GetGameTime());
+		PrintToServer("[%i] AddEventThree: %s, %s, %s, %f, %i, %i, %i, time: %f", GetGameTickCount(), event.target, event.targetInput, event.variantValue, event.delay, entIndex, EntRefToEntIndex(event.caller), event.outputID, GetGameTime());
 	#endif
 
 	g_aPlayerEvents[entIndex].PushArray(event);
@@ -246,39 +253,39 @@ public void ResolveVariantValue(Handle &params, event_t event)
 	}
 }
 
-public Action OnTrigger(const char[] output, int caller, int activator, float delay)
+public MRESReturn DHook_ActivateMultiTrigger(int pThis, DHookParam hParams)
 {
-	if(activator <= MAXPLAYERS && activator > 0)
+	int client = hParams.Get(1);
+	
+	if(!(0 < client <= MaxClients) || !IsClientInGame(client) || IsFakeClient(client))
+		return MRES_Ignored;
+	
+	float m_flWait = GetEntPropFloat(pThis, Prop_Data, "m_flWait");
+	
+	bool bFound;
+	entity_t ent;
+	for(int i = 0; i < g_aOutputWait[client].Length; i++)
 	{
-		float m_flWait = GetEntPropFloat(caller, Prop_Data, "m_flWait");
+		g_aOutputWait[client].GetArray(i, ent);
 		
-		bool bFound;
-		entity_t ent;
-		for(int i = 0; i < g_aOutputWait[activator].Length; i++)
+		if(pThis == EntRefToEntIndex(ent.caller))
 		{
-			g_aOutputWait[activator].GetArray(i, ent);
-			
-			if(caller == EntRefToEntIndex(ent.caller))
-			{
-				bFound = true;
-				break;
-			}
+			bFound = true;
+			break;
 		}
-		
-		if(!bFound)
-		{
-			ent.caller = EntIndexToEntRef(caller);
-			int ticks = RoundToCeil((m_flWait - FLT_EPSILON) / GetTickInterval());
-			ent.waitTime = float(ticks);
-			g_aOutputWait[activator].PushArray(ent);	
-			return Plugin_Continue;
-		}
-		else
-		{
-			return Plugin_Handled;
-		}
-	} 
-	return Plugin_Continue;
+	}
+	
+	if(!bFound)
+	{
+		ent.caller = EntIndexToEntRef(pThis);
+		int ticks = RoundToCeil((m_flWait - FLT_EPSILON) / GetTickInterval());
+		ent.waitTime = float(ticks);
+		g_aOutputWait[client].PushArray(ent);
+		SetEntProp(pThis, Prop_Data, "m_nNextThinkTick", 0);
+		return MRES_Ignored;
+	}
+	
+	return MRES_Supercede;
 }
 
 int FindEntityByName(int startEntity, char[] targetname, int searchingEnt, int activator, int caller)
@@ -308,7 +315,7 @@ public void ServiceEvent(event_t event)
 		AcceptEntityInput(targetEntity, event.targetInput, activator, caller, event.outputID);
 		
 		#if defined DEBUG
-			PrintToChat(activator, "Performing output: %s, %i, %i, %s %s, %i, %f", event.target, targetEntity, caller, event.targetInput, event.variantValue, event.outputID, GetGameTime());
+			PrintToServer("[%i] Performing output: %s, %i, %i, %s %s, %i, %f", GetGameTickCount(), event.target, targetEntity, caller, event.targetInput, event.variantValue, event.outputID, GetGameTime());
 		#endif
 	} 
 }
