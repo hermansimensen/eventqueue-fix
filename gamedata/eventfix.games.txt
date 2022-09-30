@@ -1,5 +1,16 @@
 "Games"
 {
+	"#default"
+	{
+		"Offsets"
+		{
+			"LINUX"
+			{
+				"linux" "1"
+			}
+		}
+	}
+
 	"csgo"
 	{
 		"Signatures"
