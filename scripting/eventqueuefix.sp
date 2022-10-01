@@ -4,7 +4,7 @@
 #define PLUGIN_NAME           "EventQueue fix"
 #define PLUGIN_AUTHOR         "carnifex"
 #define PLUGIN_DESCRIPTION    ""
-#define PLUGIN_VERSION        "1.3.0"
+#define PLUGIN_VERSION        "1.3.1"
 #define PLUGIN_URL            ""
 
 #include <sourcemod>
@@ -152,7 +152,10 @@ void LoadDHooks()
 		SetFailState("Faild to find AddEventThree signature.");
 	DHookAddParam(addEventThree, HookParamType_CharPtr);
 	DHookAddParam(addEventThree, HookParamType_CharPtr);
-	DHookAddParam(addEventThree, HookParamType_Object, 20, DHookPass_ByVal|DHookPass_ODTOR|DHookPass_OCTOR|DHookPass_OASSIGNOP);
+	if (gamedataConf.GetOffset("LINUX") == 1)
+		DHookAddParam(addEventThree, HookParamType_ObjectPtr);
+	else
+		DHookAddParam(addEventThree, HookParamType_Object, 20);
 	DHookAddParam(addEventThree, HookParamType_Float);
 	DHookAddParam(addEventThree, HookParamType_Int);
 	DHookAddParam(addEventThree, HookParamType_Int);
