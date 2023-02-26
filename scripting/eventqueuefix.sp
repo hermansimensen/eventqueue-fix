@@ -4,7 +4,7 @@
 #define PLUGIN_NAME           "EventQueue fix"
 #define PLUGIN_AUTHOR         "carnifex"
 #define PLUGIN_DESCRIPTION    ""
-#define PLUGIN_VERSION        "1.3.1"
+#define PLUGIN_VERSION        "1.3.2"
 #define PLUGIN_URL            ""
 
 #include <sourcemod>
