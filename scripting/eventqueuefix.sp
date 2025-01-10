@@ -4,7 +4,7 @@
 #define PLUGIN_NAME           "EventQueue fix"
 #define PLUGIN_AUTHOR         "carnifex"
 #define PLUGIN_DESCRIPTION    ""
-#define PLUGIN_VERSION        "1.3.2"
+#define PLUGIN_VERSION        "1.3.3"
 #define PLUGIN_URL            ""
 
 #include <sourcemod>
@@ -247,6 +247,13 @@ public void ResolveVariantValue(Handle &params, event_t event)
 		{
 			int iVar = DHookGetParamObjectPtrVar(params, 3, 0, ObjectValueType_Int);
 			IntToString(iVar, event.variantValue, sizeof(event.variantValue));
+		}
+		
+		//Color32
+		case 9:
+		{
+			int iVar = DHookGetParamObjectPtrVar(params, 3, 0, ObjectValueType_Int);
+			FormatEx(event.variantValue, sizeof(event.variantValue), "%d %d %d", (iVar&0xFF), (iVar&0xFF00) >> 8, (iVar&0xFF0000) >> 16);
 		}
 		
 		default:
