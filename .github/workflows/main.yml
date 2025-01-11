@@ -21,26 +21,26 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-      
+      - uses: actions/checkout@v4
+
       - name: Set environment variables
         run: |
           echo "SCRIPTS_PATH=scripting" >> $GITHUB_ENV
           mkdir plugins
-        
+
       - name: Setup SourcePawn Compiler
-        uses: rumblefrog/setup-sp@v1.0.1
+        uses: rumblefrog/setup-sp@v1.2.4
         with:
           # Version of SP compiler
           version: 1.10.x
-        
+
       - name: Compile EventQueueFix
-        run: 
+        run:
             spcomp -E -w234 -O2 -v2 -i include -o ../plugins/eventqueuefix.smx eventqueuefix.sp
         working-directory: ${{ env.SCRIPTS_PATH }}
-        
+
       - name: Upload Artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: eventqueuefix-dev
           path: |
