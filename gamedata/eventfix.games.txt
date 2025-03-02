@@ -75,20 +75,53 @@
 	{
 		"Signatures"
 		{
+			// search for "ent_fire <target> [action]" to find the ent_fire command callback.
+			// the last function call should be the AddEvent function we're looking for...
+			// TODO: Might need g_EventQueue passed on windows64, linux64, and linux (or at least a dummy value)
 			"AddEventThree"
 			{
-				"windows"	"\x55\x8B\xEC\x56\x57\x8B\xF9\xB9\x2A\x2A\x2A\x2A\x6A\x38\xE8\x2A\x2A\x2A\x2A\x8B\xF0\x85\xF6\x74\x2A\xC7\x46\x0C\xFF\xFF\xFF\xFF\xC7\x46\x10\xFF\xFF\xFF\xFF\xC7\x46\x18\xFF\xFF\xFF\xFF\xC7\x46\x1C\x00\x00\x00\x00\xC7\x46\x28\xFF\xFF\xFF\xFF\xC7\x46\x2C\x00\x00\x00\x00\xEB\x2A\x33\xF6\xA1\x2A\x2A\x2A\x2A\xF3\x0F\x10\x40\x0C"
+				"windows"	"\x55\x8B\xEC\x56\x57\x8B\xF9\xB9\x2A\x2A\x2A\x2A\x6A\x38\xE8\x2A\x2A\x2A\x2A\x8B\xF0\x85\xF6\x74\x2A\xC7\x46\x2A\xFF\xFF\xFF\xFF\xC7\x46\x2A\xFF\xFF\xFF\xFF\xC7\x46\x2A\xFF\xFF\xFF\xFF\xC7\x46\x2A\x00\x00\x00\x00\xC7\x46\x2A\xFF\xFF\xFF\xFF\xC7\x46\x2A\x00\x00\x00\x00\xEB\x2A\x33\xF6\xA1\x2A\x2A\x2A\x2A\xF3\x0F\x10\x45\x2A\xF3\x0F\x58\x40"
+				"windows64" "\x48\x89\x5C\x24\x2A\x48\x89\x6C\x24\x2A\x48\x89\x74\x24\x2A\x57\x41\x56\x41\x57\x48\x83\xEC\x20\x48\x8B\xFA\x48\x8B\xE9"
 				"linux"		"@_ZN11CEventQueue8AddEventEPKcS1_9variant_tfP11CBaseEntityS4_i"
+				"linux64"   "@_ZN11CEventQueue8AddEventEPKcS1_9variant_tfP11CBaseEntityS4_i"
 			}
+			// search for "Can't find landmark %s" to find CChangeLevel::FindLandmark and the first function call inside is the `FindEntityByName` we're looking for...
+			// TODO: Might need gEntList to be passed
 			"FindEntityByName"
 			{
-				"windows"	"\x55\x8B\xEC\x53\x8B\x5D\x0C\x56\x8B\xF1\x85\xDB\x74\x2A"
+				"windows"	"\x55\x8B\xEC\x53\x8B\x5D\x2A\x56\x8B\xF1\x57\x85\xDB\x0F\x84"
+				"windows64" "\x48\x89\x5C\x24\x2A\x48\x89\x74\x24\x2A\x48\x89\x7C\x24\x2A\x41\x56\x48\x83\xEC\x30\x4D\x8B\xD1"
 				"linux"		"@_ZN17CGlobalEntityList16FindEntityByNameEP11CBaseEntityPKcS1_S1_S1_P17IEntityFindFilter"
+				"linux64"   "@_ZN17CGlobalEntityList16FindEntityByNameEP11CBaseEntityPKcS1_S1_S1_P17IEntityFindFilter"
 			}
+			// search for the float 0.2f in memory and find somewhere that uses it and looks like this:
+			//    void CTriggerMultiple::Spawn(longlong param_1)
+			//    {
+			//      FUN_1802b1170();
+			//      FUN_1802b6d20(param_1);
+			//      *(code **)(param_1 + 0x130) = CTriggerMultiple::MultiTouch_with_inlined_ActivateMultiTrigger;  // <---- might be ::MultiTouch, might be MultiTouch_with_inlined_ActivateMultiTrigger (on Windows64).
+			//      if (*(float *)(param_1 + 0x488) == 0.0) {
+			//        *(undefined4 *)(param_1 + 0x488) = 0x3e4ccccd;
+			//      }
+			//      return;
+			//    }
+			// or like this on windows32
+			//    void __fastcall CTriggerMultiple::Spawn(int param_1)
+			//    {
+			//      FUN_1024a100();
+			//      FUN_1024f190();
+			//      *(code **)(param_1 + 200) = CTriggerMultiple::MultiTouch_with_inlined_ActivateMultiTrigger;
+			//      if (NAN(*(float *)(param_1 + 0x37c)) != (*(float *)(param_1 + 0x37c) == 0.0)) {
+			//        *(undefined4 *)(param_1 + 0x37c) = 0x3e4ccccd;
+			//      }
+			//      return;
+			//    }
 			"ActivateMultiTrigger"
 			{
-				"windows"	"\x55\x8B\xEC\x56\x6A\x00\x8B\xF1\xE8\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\xD9\x40\x0C\xD9\xC9"
+				"windows"	"\x55\x8B\xEC\x56\x8B\xF1\x57\x8B\x7D\x2A\x57\x8B\x06\x8B\x80\x2A\x2A\x2A\x2A\xFF\xD0\x84\xC0\x0F\x84\x2A\x2A\x2A\x2A\x6A\x00"
+				"windows64" "\x48\x89\x5C\x24\x2A\x57\x48\x83\xEC\x30\x48\x8B\x01\x48\x8B\xFA\x48\x8B\xD9\xFF\x90\x2A\x2A\x2A\x2A\x84\xC0\x0F\x84\x2A\x2A\x2A\x2A\x33\xD2"
 				"linux"		"@_ZN16CTriggerMultiple20ActivateMultiTriggerEP11CBaseEntity"
+				"linux64"   "@_ZN16CTriggerMultiple20ActivateMultiTriggerEP11CBaseEntity"
 			}
 		}
 
@@ -102,7 +135,9 @@
 			"m_RefEHandle"
 			{
 				"windows"	"12"
+				"windows64" "12"
 				"linux"		"12"
+				"linux64"   "12"
 			}
 		}
 	}
