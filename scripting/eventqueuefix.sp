@@ -146,7 +146,7 @@ void LoadDHooks()
 	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer, VDECODE_FLAG_ALLOWNULL | VDECODE_FLAG_ALLOWWORLD);
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_ByValue); 
 	g_hFindEntityByName = EndPrepSDKCall();
-	
+
 	Handle addEventThree = DHookCreateDetour(Address_Null, CallConv_THISCALL, ReturnType_Void, ThisPointer_Ignore);
 	if(!DHookSetFromConf(addEventThree, gamedataConf, SDKConf_Signature, "AddEventThree"))
 		SetFailState("Faild to find AddEventThree signature.");
@@ -317,10 +317,14 @@ public void ServiceEvent(event_t event)
 	
 	if(!IsValidEntity(caller))
 		caller = -1;
+
+	bool byTargetname = false;
 	
 	// In the context of the event, the searching entity is also the caller
 	while ((targetEntity = FindEntityByName(targetEntity, event.target, caller, activator, caller)) != -1)
 	{
+		byTargetname = true;
+
 		SetVariantString(event.variantValue);
 		AcceptEntityInput(targetEntity, event.targetInput, activator, caller, event.outputID);
 		
@@ -328,6 +332,20 @@ public void ServiceEvent(event_t event)
 			PrintToServer("[%i] Performing output: %s, %i, %i, %s %s, %i, %f", GetGameTickCount(), event.target, targetEntity, caller, event.targetInput, event.variantValue, event.outputID, GetGameTime());
 		#endif
 	} 
+
+	if (!byTargetname)
+	{
+		// In the context of the event, the searching entity is also the caller
+		while ((targetEntity = FindEntityByClassname(targetEntity, event.target)) != -1)
+		{
+			SetVariantString(event.variantValue);
+			AcceptEntityInput(targetEntity, event.targetInput, activator, caller, event.outputID);
+
+			#if defined DEBUG
+				PrintToServer("[%i] Performing output (w/ classname): %s, %i, %i, %s %s, %i, %f", GetGameTickCount(), event.target, targetEntity, caller, event.targetInput, event.variantValue, event.outputID, GetGameTime());
+			#endif
+		}
+	}
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
